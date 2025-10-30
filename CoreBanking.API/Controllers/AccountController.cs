@@ -1,4 +1,5 @@
 ﻿using CoreBanking.Core.Interfaces;
+using CoreBanking.Core.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoreBanking.API.Controllers
@@ -15,18 +16,21 @@ namespace CoreBanking.API.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetAllAccounts()
+        public async Task<IActionResult> GetAllAccounts()
         {
-            var accounts = _accountRepository.GetAll();
+            var accounts = await _accountRepository.GetAllAsync();
             return Ok(accounts);
         }
 
-        [HttpGet("{id}")]
-        public IActionResult GetAccount(int id)
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetAccount(Guid id)
         {
-            var account = _accountRepository.GetById(id);
+            var accountId = AccountId.Create(id);
+
+            var account = await _accountRepository.GetByIdAsync(accountId);
             if (account == null)
                 return NotFound($"Account with ID {id} not found.");
+
             return Ok(account);
         }
     }

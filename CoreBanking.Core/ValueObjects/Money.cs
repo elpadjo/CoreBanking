@@ -2,8 +2,11 @@
 {
     public record Money
     {
-        public decimal Amount { get; }
-        public string Currency { get; } = "NGN";
+        public decimal Amount { get; private set; }
+        public string Currency { get; private set; } = "NGN";
+
+        // EF Core needs this for materialization
+        private Money() { }
 
         public Money(decimal amount, string currency = "NGN")
         {

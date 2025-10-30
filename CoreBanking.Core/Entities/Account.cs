@@ -5,36 +5,42 @@ using System.Transactions;
 
 namespace CoreBanking.Core.Entities
 {
-    public class Account
+    public class Account : ISoftDelete
     {
-        public Guid AccountId { get; private set; }
+        public AccountId AccountId { get; private set; }
         public AccountNumber AccountNumber { get; private set; }
         public AccountType AccountType { get; private set; }
         public Money Balance { get; private set; }
-        public Guid CustomerId { get; private set; }
+        public CustomerId CustomerId { get; private set; }
+        public Customer Customer { get; private set; }
         public DateTime DateOpened { get; private set; }
+        public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
         public bool IsActive { get; private set; }
+        public bool IsDeleted { get; private set; }
+        public DateTime? DeletedAt { get; private set; }
+        public string? DeletedBy { get; private set; }
+
 
         // Navigation properties - private to enforce aggregate boundary
         private readonly List<Transaction> _transactions = new();
         public IReadOnlyCollection<Transaction> Transactions => _transactions.AsReadOnly();
 
-        // Required for EF Core
-        private Account() { }
+        private Account() { } // EF Core needs this
 
-        public Account(AccountNumber accountNumber, AccountType accountType, Guid customerId)
+        public Account(AccountNumber accountNumber, AccountType accountType, CustomerId customerId, Customer customer)
         {
-            AccountId = Guid.NewGuid();
+            AccountId = AccountId.Create();
             AccountNumber = accountNumber;
             AccountType = accountType;
             CustomerId = customerId;
+            Customer = customer;
             Balance = new Money(0);
             DateOpened = DateTime.UtcNow;
             IsActive = true;
         }
 
         // Core banking operations - these are the aggregate's public API
-        public Transaction Deposit(Money amount, string description = "Deposit")
+        public Transaction Deposit(Money amount, Account account, string description = "Deposit")
         {
             if (!IsActive)
                 throw new InvalidOperationException("Cannot deposit to inactive account");
@@ -46,6 +52,7 @@ namespace CoreBanking.Core.Entities
 
             var transaction = new Transaction(
                 accountId: AccountId,
+                account: account,
                 type: TransactionType.Deposit,
                 amount: amount,
                 description: description
@@ -55,7 +62,7 @@ namespace CoreBanking.Core.Entities
             return transaction;
         }
 
-        public Transaction Withdraw(Money amount, string description = "Withdrawal")
+        public Transaction Withdraw(Money amount, Account account, string description = "Withdrawal")
         {
             if (!IsActive)
                 throw new InvalidOperationException("Cannot withdraw from inactive account");
@@ -74,6 +81,7 @@ namespace CoreBanking.Core.Entities
 
             var transaction = new Transaction(
                 accountId: AccountId,
+                account: account,
                 type: TransactionType.Withdrawal,
                 amount: amount,
                 description: description
@@ -89,6 +97,14 @@ namespace CoreBanking.Core.Entities
                 throw new InvalidOperationException("Cannot close account with non-zero balance");
 
             IsActive = false;
+        }
+
+        public void UpdateBalance(Money newBalance)
+        {
+            if (!IsActive)
+                throw new InvalidOperationException("Cannot update balance for inactive account.");
+
+            Balance = newBalance;
         }
     }
 }

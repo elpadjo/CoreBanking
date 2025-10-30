@@ -1,6 +1,8 @@
 
 using CoreBanking.Core.Interfaces;
+using CoreBanking.Infrastructure.Data;
 using CoreBanking.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoreBanking.API
 {
@@ -10,8 +12,13 @@ namespace CoreBanking.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddDbContext<BankingDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
             // Register dependencies (DI)
+            builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
             builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+            builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
             // Add services to the container.
 
