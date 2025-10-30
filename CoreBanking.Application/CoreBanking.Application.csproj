@@ -7,11 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\**" />
+    <EmbeddedResource Remove="Services\**" />
+    <None Remove="Services\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CoreBanking.Core\CoreBanking.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Services\" />
+    <PackageReference Include="FluentValidation" Version="12.0.0" />
+    <PackageReference Include="MediatR" Version="13.1.0" />
   </ItemGroup>
 
 </Project>

@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="13.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -18,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CoreBanking.Application\CoreBanking.Application.csproj" />
     <ProjectReference Include="..\CoreBanking.Core\CoreBanking.Core.csproj" />
     <ProjectReference Include="..\CoreBanking.Infrastructure\CoreBanking.Infrastructure.csproj" />
   </ItemGroup>

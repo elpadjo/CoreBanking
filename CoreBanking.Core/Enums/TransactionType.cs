@@ -4,7 +4,8 @@
     {
         Deposit = 1,
         Withdrawal = 2,
-        Transfer = 3,
-        Interest = 4
+        TransferIn = 3,    // Money coming into account
+        TransferOut = 4,   // Money leaving account
+        Interest = 5
     }
 }
