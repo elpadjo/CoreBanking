@@ -20,6 +20,7 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task<Account?> GetByIdAsync(AccountId accountId)
         {
             return await _context.Accounts
+                .Include(a => a.Customer) // ← Eager load Customer
                 .Include(a => a.Transactions)
                 .FirstOrDefaultAsync(a => a.AccountId == accountId);
         }
@@ -27,6 +28,7 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task<List<Account>> GetAllAsync()
         {
             return await _context.Accounts
+                .Include(a => a.Customer) 
                 .Include(a => a.Transactions)
                 .ToListAsync();
         }
@@ -34,6 +36,7 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task<Account?> GetByAccountNumberAsync(AccountNumber accountNumber)
         {
             return await _context.Accounts
+                .Include(a => a.Customer)
                 .Include(a => a.Transactions)
                 .FirstOrDefaultAsync(a => a.AccountNumber == accountNumber);
         }
@@ -42,6 +45,7 @@ namespace CoreBanking.Infrastructure.Repositories
         {
             return await _context.Accounts
                 .Where(a => a.CustomerId == customerId)
+                .Include(a => a.Customer) 
                 .Include(a => a.Transactions)
                 .ToListAsync();
         }

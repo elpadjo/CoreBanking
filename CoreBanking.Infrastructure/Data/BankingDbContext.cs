@@ -47,13 +47,13 @@ namespace CoreBanking.Infrastructure.Data
                                 value => AccountId.Create(value));
 
                 // Configure AccountNumber as owned type (Value Object)
-                entity.OwnsOne(a => a.AccountNumber, an =>
-                {
-                    an.Property(a => a.Value)
+                entity.Property(a => a.AccountNumber)
+                    .HasConversion(
+                        accountNumber => accountNumber.Value,
+                        value => AccountNumber.Create(value))
                     .HasColumnName("AccountNumber")
-                    .IsRequired()
-                    .HasMaxLength(10);
-                });
+                    .HasMaxLength(10)
+                    .IsRequired();
 
                 // Configure Money as owned type (Value Object)
                 entity.OwnsOne(a => a.Balance, money =>
@@ -136,6 +136,7 @@ namespace CoreBanking.Infrastructure.Data
 
             modelBuilder.Entity<Account>().HasData(new {
                     AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                    AccountNumber = AccountNumber.Create("1000000001"),
                     AccountType = AccountType.Checking, // EF handles enum conversion
                     CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
                     Currency = "NGN",
@@ -146,14 +147,6 @@ namespace CoreBanking.Infrastructure.Data
             );
 
             // Then configure the owned types separately
-            modelBuilder.Entity<Account>().OwnsOne(a => a.AccountNumber).HasData(
-                new
-                {
-                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
-                    Value = "1000000001"
-                }
-            );
-
             modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(
                 new
                 {
