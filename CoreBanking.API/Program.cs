@@ -1,16 +1,21 @@
+using CoreBanking.API.gRPC.Mappings;
+using CoreBanking.API.gRPC.Services;
 using CoreBanking.API.Middleware;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
+using CoreBanking.Application.Accounts.EventHandlers;
 using CoreBanking.Application.Common.Behaviors;
+using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Application.Common.Mappings;
+using CoreBanking.Core.Events;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
 using CoreBanking.Infrastructure.Repositories;
+using CoreBanking.Infrastructure.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-
 namespace CoreBanking.API
 {
     public class Program
@@ -22,18 +27,38 @@ namespace CoreBanking.API
             builder.Services.AddDbContext<BankingDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            // Add Application and Infrastructure Services
+            //builder.Services.AddApplicationServices();
+            //builder.Services.AddInfrastructureServices(builder.Configuration);
+
             // Register dependencies (DI)
+
+            // Register Repositories
             builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
             builder.Services.AddScoped<IAccountRepository, AccountRepository>();
             builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            builder.Services.AddValidatorsFromAssembly(typeof(CreateAccountCommandValidator).Assembly);
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<IOutboxMessageProcessor, OutboxMessageProcessor>();
+            builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+
+            // Register domain event handlers
+            builder.Services.AddTransient<INotificationHandler<AccountCreatedEvent>, AccountCreatedEventHandler>();
+            builder.Services.AddTransient<INotificationHandler<MoneyTransferedEvent>, MoneyTransferedEventHandler>();
+            builder.Services.AddTransient<INotificationHandler<InsufficientFundsEvent>, InsufficientFundsEventHandler>();
+
+            // Register pipeline behaviors
+            builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(DomainEventsBehavior<,>));
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
-            // Add services to the container.
-            builder.Services.AddControllers();
+            // Add gRPC services to the container.
+            builder.Services.AddGrpc(options =>
+            {
+                options.EnableDetailedErrors = true;
+                //options.Interceptors.Add<ExceptionInterceptor>();
+            });
+            builder.Services.AddGrpcReflection();
 
             // Add MediatR with behaviours
             builder.Services.AddMediatR(cfg =>
@@ -43,14 +68,22 @@ namespace CoreBanking.API
 
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+                cfg.AddOpenBehavior(typeof(DomainEventsBehavior<,>));
 
                 cfg.Lifetime = ServiceLifetime.Scoped;
             });
 
-            // Add AutoMapper
+            // Add Validators and AutoMapper
+            builder.Services.AddValidatorsFromAssembly(typeof(CreateAccountCommandValidator).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountProfile).Assembly);
+            builder.Services.AddAutoMapper(cfg => { }, typeof(AccountGrpcProfile).Assembly);
 
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            // Register outbox and Background services
+            builder.Services.AddScoped<IOutboxMessageProcessor, OutboxMessageProcessor>();
+            builder.Services.AddHostedService<OutboxBackgroundService>();
+
+            // Add controllers and swagger
+            builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
             // Enriched swaggerGen with XML comments and authentication
@@ -111,6 +144,14 @@ namespace CoreBanking.API
             app.UseAuthorization();
 
             app.MapControllers();
+
+            //Use grpc Endpoints
+            app.MapGrpcService<AccountGrpcService>();
+            app.MapGet("/", () => "CoreBanking API is running. Use /swagger for REST or a gRPC client for gRPC calls.");
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapGrpcReflectionService();
+            }
 
             app.Run();
         }

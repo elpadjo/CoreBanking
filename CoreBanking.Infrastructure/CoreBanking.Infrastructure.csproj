@@ -16,9 +16,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CoreBanking.Application\CoreBanking.Application.csproj" />
     <ProjectReference Include="..\CoreBanking.Core\CoreBanking.Core.csproj" />
   </ItemGroup>
 

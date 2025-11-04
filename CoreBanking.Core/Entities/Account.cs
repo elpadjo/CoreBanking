@@ -5,7 +5,7 @@ using CoreBanking.Core.ValueObjects;
 
 namespace CoreBanking.Core.Entities
 {
-    public class Account : ISoftDelete
+    public class Account : AggregateRoot<AccountId>, ISoftDelete
     {
         public AccountId AccountId { get; private set; }
         public AccountNumber AccountNumber { get; private set; }
@@ -20,9 +20,8 @@ namespace CoreBanking.Core.Entities
         public DateTime? DeletedAt { get; private set; }
         public string? DeletedBy { get; private set; }
 
-        // Domain events collection
-        private readonly List<IDomainEvent> _domainEvents = new();
-        public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+        private readonly List<DomainEvent> _domainEvents = new();
+        public IReadOnlyCollection<DomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
         // Navigation properties - private to enforce aggregate boundary
         private readonly List<Transaction> _transactions = new();
@@ -118,13 +117,18 @@ namespace CoreBanking.Core.Entities
             };
 
             // Raise domain event if needed
-            account.AddDomainEvent(new AccountCreatedEvent(account));
+            account.AddDomainEvent(new AccountCreatedEvent(
+                accountId: account.AccountId,
+                accountNumber: account.AccountNumber,
+                customerId: account.CustomerId,
+                accountType: account.AccountType,
+                initialDeposit: account.Balance
+            ));
 
             return account;
         }
 
-        // Add to CoreBanking.Core/Entities/Account.cs
-        public void Transfer(Money amount, Account destination, string reference, string description)
+        public Result Transfer(Money amount, Account destination, string reference, string description)
         {
             // Validate inputs
             if (destination == null)
@@ -145,43 +149,102 @@ namespace CoreBanking.Core.Entities
 
             // Check sufficient funds
             if (Balance.Amount < amount.Amount)
-                throw new InvalidOperationException("Insufficient funds for transfer");
+            {
+                // Raise insufficient funds event
+                _domainEvents.Add(new InsufficientFundsEvent(
+                    AccountNumber, amount, Balance, "Transfer"));
+
+                return Result.Failure("Insufficient funds for transfer");
+            }
 
             // Special business rules for Savings accounts
-            if (AccountType == AccountType.Savings && _transactions.Count(t => t.Type == TransactionType.Withdrawal) >= 6)
-                throw new InvalidOperationException("Savings account withdrawal limit reached");
+            if (AccountType == AccountType.Savings &&
+                _transactions.Count(t => t.Type == TransactionType.Withdrawal) >= 6)
+            {
+                return Result.Failure("Savings account withdrawal limit reached");
+            }
 
             // Execute the transfer as an atomic operation
-            // Withdraw from source
+            var debitResult = Debit(amount, $"Transfer to {destination.AccountNumber}", reference);
+            if (!debitResult.IsSuccess)
+                return debitResult;
+
+            var creditResult = destination.Credit(amount, $"Transfer from {AccountNumber}", reference);
+            if (!creditResult.IsSuccess)
+                return creditResult;
+
+            // Raise money transferred event
+            var transactionId = TransactionId.Create();
+            _domainEvents.Add(new MoneyTransferedEvent(
+                transactionId, AccountNumber, destination.AccountNumber, amount, reference));
+
+            // Return success result
+            return Result.Success();
+        }
+
+        public Result Debit(Money amount, string description, string reference)
+        {
+            if (IsDeleted)
+                return Result.Failure("Cannot debit a deleted account");
+
+            if (amount.Amount <= 0)
+                return Result.Failure("Debit amount must be positive");
+
+            if (Balance.Amount < amount.Amount)
+                return Result.Failure("Insufficient funds");
+
+            // Apply debit
             Balance -= amount;
-            var withdrawalTransaction = new Transaction(
-                accountId: AccountId,
-                account: this,
-                type: TransactionType.TransferOut,
-                amount: amount,
-                description: $"Transfer to {destination.AccountNumber.Value}: {description}",
-                reference: reference
-            );
-            _transactions.Add(withdrawalTransaction);
 
-            // Deposit to destination
-            destination.Balance += amount;
-            var depositTransaction = new Transaction(
-                accountId: destination.AccountId,
-                account: destination,
-                type: TransactionType.TransferIn,
-                amount: amount,
-                description: $"Transfer from {AccountNumber.Value}: {description}",
-                reference: reference
+            // Record transaction (matches your Transaction constructor)
+            var transaction = new Transaction(
+                AccountId,                            // AccountId
+                TransactionType.Withdrawal,    // Transaction type
+                amount,                        // Amount
+                description,                   // Description
+                this,                          // Account reference
+                reference                      // Optional reference
             );
-            destination._transactions.Add(depositTransaction);
 
-            // Raise domain events for the transfer
-            AddDomainEvent(new MoneyTransferredEvent(this, destination, amount, reference));
+            _transactions.Add(transaction);
+
+            // Raise domain event
+            //AddDomainEvent(new AccountDebitedEvent(Id, amount, reference));
+
+            return Result.Success();
+        }
+
+        public Result Credit(Money amount, string description, string reference)
+        {
+            if (IsDeleted)
+                return Result.Failure("Cannot credit a deleted account");
+
+            if (amount.Amount <= 0)
+                return Result.Failure("Credit amount must be positive");
+
+            // Apply credit
+            Balance += amount;
+
+            // Record transaction (matches your Transaction constructor)
+            var transaction = new Transaction(
+                AccountId,                          // AccountId
+                TransactionType.Deposit,     // Transaction type
+                amount,                      // Amount
+                description,                 // Description
+                this,                        // Account reference
+                reference                    // Optional reference
+            );
+
+            _transactions.Add(transaction);
+
+            // Raise domain event
+            //AddDomainEvent(new AccountCreditedEvent(Id, amount, reference));
+
+            return Result.Success();
         }
 
         // Domain event methods
-        public void AddDomainEvent(IDomainEvent domainEvent)
+        public void AddDomainEvent(DomainEvent domainEvent)
         {
             _domainEvents.Add(domainEvent);
         }
