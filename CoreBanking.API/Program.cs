@@ -13,6 +13,7 @@ using CoreBanking.Infrastructure.Repositories;
 using CoreBanking.Infrastructure.Services;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
@@ -31,6 +32,22 @@ namespace CoreBanking.API
             //builder.Services.AddApplicationServices();
             //builder.Services.AddInfrastructureServices(builder.Configuration);
 
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                // HTTP (for Swagger, REST, etc.)
+                options.ListenLocalhost(5037, o =>
+                {
+                    o.Protocols = HttpProtocols.Http1;
+                });
+
+                // HTTPS (for gRPC, requires HTTP/2)
+                options.ListenLocalhost(7288, o =>
+                {
+                    o.UseHttps(); // uses developer cert
+                    o.Protocols = HttpProtocols.Http2;
+                });
+            });
+
             // Register dependencies (DI)
 
             // Register Repositories
@@ -39,7 +56,6 @@ namespace CoreBanking.API
             builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-            builder.Services.AddScoped<IOutboxMessageProcessor, OutboxMessageProcessor>();
             builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
             // Register domain event handlers
