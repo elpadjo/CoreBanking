@@ -1,5 +1,4 @@
-﻿// CoreBanking.Core/Common/IDomainEvent.cs
-namespace CoreBanking.Core.Common;
+﻿namespace CoreBanking.Core.Interfaces;
 
 public interface IDomainEvent
 {

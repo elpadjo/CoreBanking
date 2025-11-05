@@ -1,6 +1,5 @@
-﻿using MediatR;
-
-namespace CoreBanking.Core.Common;
+﻿using CoreBanking.Core.Interfaces;
+using MediatR;
 
 public abstract record DomainEvent : IDomainEvent, INotification
 {

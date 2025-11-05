@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using CoreBanking.Core.Interfaces;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CoreBanking.Core.Common;
 
