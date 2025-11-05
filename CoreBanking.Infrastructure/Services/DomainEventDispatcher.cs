@@ -1,4 +1,5 @@
 ﻿using CoreBanking.Application.Common.Interfaces;
+using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
 using MediatR;
 using Microsoft.Extensions.Logging;

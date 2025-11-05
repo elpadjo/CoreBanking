@@ -2,6 +2,7 @@
 using CoreBanking.Core.Common;
 using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
+using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.ValueObjects;
 using CoreBanking.Infrastructure.Persistence.Configurations;
 using CoreBanking.Infrastructure.Persistence.Outbox;

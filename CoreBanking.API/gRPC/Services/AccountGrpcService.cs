@@ -74,7 +74,7 @@ public class AccountGrpcService : AccountService.AccountServiceBase
         {
             SourceAccountNumber = AccountNumber.Create(request.SourceAccountNumber),
             DestinationAccountNumber = AccountNumber.Create(request.DestinationAccountNumber),
-            Amount = new Money((decimal)request.Amount, request.Currency),
+            Amount = new Core.ValueObjects.Money((decimal)request.Amount, request.Currency),
             Reference = request.Reference,
             Description = request.Description
         };

@@ -1,6 +1,7 @@
 ﻿using CoreBanking.Core.Interfaces;
 using MediatR;
 
+namespace CoreBanking.Core.Common;
 public abstract record DomainEvent : IDomainEvent, INotification
 {
     public Guid EventId { get; } = Guid.NewGuid();

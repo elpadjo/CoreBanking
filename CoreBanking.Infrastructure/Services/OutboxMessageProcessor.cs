@@ -1,5 +1,6 @@
 ﻿using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Core.Common;
+using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
 using CoreBanking.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;

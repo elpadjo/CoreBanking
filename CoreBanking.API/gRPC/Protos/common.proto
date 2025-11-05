@@ -4,6 +4,8 @@ import "google/protobuf/timestamp.proto";
 
 package corebanking;
 
+option csharp_namespace = "CoreBanking.API.gRPC";
+
 message Money {
     double amount = 1;
     string currency = 2;
