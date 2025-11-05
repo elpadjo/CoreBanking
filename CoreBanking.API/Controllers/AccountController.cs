@@ -84,7 +84,8 @@ public class AccountsController : ControllerBase
     /// <summary>
     /// Transfer money between accounts
     /// </summary>
-    /// <param name="accountNumber">Source account number</param>
+    /// <param name="sourceaccountNumber">Source account number</param>
+    /// <param name="destinationaccountNumber">Destination account number</param>
     /// <param name="request">Transfer details</param>
     /// <returns>Transfer operation result</returns>
     /// <response code="200">Transfer completed successfully</response>
@@ -95,15 +96,15 @@ public class AccountsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse>> TransferMoney(
-        string accountNumber,
+        string sourceaccountNumber, string destinationaccountNumber,
         [FromBody] TransferMoneyRequest request)
     {
-        _logger.LogInformation("Processing transfer from {AccountNumber}", accountNumber);
+        _logger.LogInformation("Processing transfer from {AccountNumber}", sourceaccountNumber);
 
         var command = new TransferMoneyCommand
         {
-            SourceAccountNumber = AccountNumber.Create(accountNumber),
-            DestinationAccountNumber = AccountNumber.Create(request.DestinationAccountNumber),
+            SourceAccountNumber = AccountNumber.Create(sourceaccountNumber),
+            DestinationAccountNumber = AccountNumber.Create(destinationaccountNumber),
             Amount = new Money(request.Amount, request.Currency),
             Reference = request.Reference,
             Description = request.Description

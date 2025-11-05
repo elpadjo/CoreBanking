@@ -1,5 +1,7 @@
 using CoreBanking.API.gRPC.Mappings;
 using CoreBanking.API.gRPC.Services;
+using CoreBanking.API.Hubs;
+using CoreBanking.API.Hubs.EventHandlers;
 using CoreBanking.API.Middleware;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
 using CoreBanking.Application.Accounts.EventHandlers;
@@ -17,6 +19,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+
 namespace CoreBanking.API
 {
     public class Program
@@ -25,149 +28,127 @@ namespace CoreBanking.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // ------------------- SERVICES -------------------
+
             builder.Services.AddDbContext<BankingDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // Add Application and Infrastructure Services
-            //builder.Services.AddApplicationServices();
-            //builder.Services.AddInfrastructureServices(builder.Configuration);
-
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                // HTTP (for Swagger, REST, etc.)
-                options.ListenLocalhost(5037, o =>
-                {
-                    o.Protocols = HttpProtocols.Http1;
-                });
-
-                // HTTPS (for gRPC, requires HTTP/2)
-                options.ListenLocalhost(7288, o =>
-                {
-                    o.UseHttps(); // uses developer cert
-                    o.Protocols = HttpProtocols.Http2;
-                });
-            });
-
-            // Register dependencies (DI)
-
-            // Register Repositories
+            // Core dependencies
             builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
             builder.Services.AddScoped<IAccountRepository, AccountRepository>();
             builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
-
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
-            // Register domain event handlers
+            // Event handlers
             builder.Services.AddTransient<INotificationHandler<AccountCreatedEvent>, AccountCreatedEventHandler>();
             builder.Services.AddTransient<INotificationHandler<MoneyTransferedEvent>, MoneyTransferedEventHandler>();
             builder.Services.AddTransient<INotificationHandler<InsufficientFundsEvent>, InsufficientFundsEventHandler>();
+            builder.Services.AddTransient<INotificationHandler<MoneyTransferedEvent>, RealTimeNotificationEventHandler>();
 
-            // Register pipeline behaviors
+            // Pipeline behaviors
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(DomainEventsBehavior<,>));
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
-            // Add gRPC services to the container.
+            // gRPC + Reflection
             builder.Services.AddGrpc(options =>
             {
                 options.EnableDetailedErrors = true;
-                //options.Interceptors.Add<ExceptionInterceptor>();
             });
             builder.Services.AddGrpcReflection();
 
-            // Add MediatR with behaviours
+            // SignalR
+            builder.Services.AddSignalR();
+
+            // MediatR setup
             builder.Services.AddMediatR(cfg =>
             {
-                // Note: Registering one command is enough per Layer—MediatR scans the entire Application assembly (all Commands & Queries).
                 cfg.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
-
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
                 cfg.AddOpenBehavior(typeof(DomainEventsBehavior<,>));
-
-                cfg.Lifetime = ServiceLifetime.Scoped;
             });
 
-            // Add Validators and AutoMapper
+            // Validation and mapping
             builder.Services.AddValidatorsFromAssembly(typeof(CreateAccountCommandValidator).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountProfile).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountGrpcProfile).Assembly);
 
-            // Register outbox and Background services
+            // Outbox
             builder.Services.AddScoped<IOutboxMessageProcessor, OutboxMessageProcessor>();
             builder.Services.AddHostedService<OutboxBackgroundService>();
 
-            // Add controllers and swagger
+            // Controllers + Swagger
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-
-            // Enriched swaggerGen with XML comments and authentication
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Title = "CoreBanking API",
                     Version = "v1",
-                    Description = "A modern banking API built with Clean Architecture, DDD and CQRS",
-                    Contact = new OpenApiContact
-                    {
-                        Name = "CoreBanking Team",
-                        Email = "support@corebanking.com"
-                    }
-                });
-
-                // Include XML comments
-                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                c.IncludeXmlComments(xmlPath);
-
-                // Add authentication support in Swagger
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    Description = "JWT Authorization header using the Bearer scheme.",
-                    Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.ApiKey,
-                    Scheme = "Bearer"
+                    Description = "A modern banking API built with Clean Architecture, DDD, and CQRS"
                 });
             });
 
+            // Kestrel multi-protocol setup
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                // HTTP/1.1 for REST, Swagger, etc.
+                options.ListenLocalhost(5037, o => o.Protocols = HttpProtocols.Http1);
+
+                // HTTP/2 for gRPC
+                options.ListenLocalhost(7288, o =>
+                {
+                    o.UseHttps();
+                    o.Protocols = HttpProtocols.Http2;
+                });
+            });
 
             var app = builder.Build();
 
-            
-            // Configure the HTTP request pipeline.
+            // ------------------- PIPELINE -------------------
+
+            app.UseHttpsRedirection();
+
+            app.UseStaticFiles(); // Enables wwwroot
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger(options => options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0);
-
-                // Enriched Swagger UI
                 app.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "CoreBanking API v1");
-                    c.RoutePrefix = "swagger"; // Access at /swagger
-                    c.DocumentTitle = "CoreBanking API Documentation";
-                    c.EnableDeepLinking();
-                    c.DisplayOperationId();
+                    c.RoutePrefix = "swagger";
                 });
+
+                app.MapGrpcReflectionService();
             }
-
-            app.UseHttpsRedirection();           
-
-            app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
             app.UseAuthorization();
 
+            app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
+            // ------------------- ROUTING -------------------
+
+            // REST API
             app.MapControllers();
 
-            //Use grpc Endpoints
+            // gRPC endpoints
             app.MapGrpcService<AccountGrpcService>();
-            app.MapGet("/", () => "CoreBanking API is running. Use /swagger for REST or a gRPC client for gRPC calls.");
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapGrpcReflectionService();
-            }
+            app.MapGrpcService<EnhancedAccountGrpcService>();
+
+            // SignalR hub
+            app.MapHub<EnhancedNotificationHub>("/hubs/enhanced-notifications");
+            app.MapHub<NotificationHub>("/hubs/notifications");
+            app.MapHub<TransactionHub>("/hubs/transactions");
+
+            // Static file fallback (optional)
+            app.MapFallbackToFile("index.html");
+
+            // Root landing page
+            app.MapGet("/", () => "CoreBanking API is running. Visit /swagger for REST or use gRPC client.");
 
             app.Run();
         }
