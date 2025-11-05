@@ -1,5 +1,8 @@
+using CoreBanking.API.gRPC.Interceptors;
 using CoreBanking.API.gRPC.Mappings;
 using CoreBanking.API.gRPC.Services;
+using CoreBanking.API.Hubs;
+using CoreBanking.API.Hubs.EventHandlers;
 using CoreBanking.API.Middleware;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
 using CoreBanking.Application.Accounts.EventHandlers;
@@ -11,12 +14,9 @@ using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
 using CoreBanking.Infrastructure.Repositories;
 using CoreBanking.Infrastructure.Services;
-using FluentValidation;
-using MediatR;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
 using System.Reflection;
+
 namespace CoreBanking.API
 {
     public class Program
@@ -63,6 +63,9 @@ namespace CoreBanking.API
             builder.Services.AddTransient<INotificationHandler<MoneyTransferedEvent>, MoneyTransferedEventHandler>();
             builder.Services.AddTransient<INotificationHandler<InsufficientFundsEvent>, InsufficientFundsEventHandler>();
 
+            // Register API event handlers (real-time signalR push)
+            builder.Services.AddScoped<INotificationHandler<MoneyTransferedEvent>, RealTimeNotificationEventHandler>();
+
             // Register pipeline behaviors
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(DomainEventsBehavior<,>));
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
@@ -72,9 +75,23 @@ namespace CoreBanking.API
             builder.Services.AddGrpc(options =>
             {
                 options.EnableDetailedErrors = true;
-                //options.Interceptors.Add<ExceptionInterceptor>();
+                options.Interceptors.Add<ExceptionInterceptor>();
+                options.MaxReceiveMessageSize = 16 * 1024 * 1024; // 16MB
+                options.MaxSendMessageSize = 16 * 1024 * 1024; // 16MB
             });
             builder.Services.AddGrpcReflection();
+
+            // Add SignalR
+            builder.Services.AddSignalR(options =>
+            {
+                options.EnableDetailedErrors = true;
+                options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+            })
+            .AddMessagePackProtocol(); // For smaller message sizes
+
+            // Register hub filters
+            builder.Services.AddSingleton<ErrorHandlingHubFilter>();
 
             // Add MediatR with behaviours
             builder.Services.AddMediatR(cfg =>
@@ -161,8 +178,16 @@ namespace CoreBanking.API
 
             app.MapControllers();
 
-            //Use grpc Endpoints
+            // Configure SignalR hubs
+            app.MapHub<NotificationHub>("/hubs/notifications");
+            app.MapHub<TransactionHub>("/hubs/transactions");
+            app.MapHub<EnhancedNotificationHub>("/hubs/enhanced-notifications");
+
+            // Configure gRPC services            
+            // Use grpc Endpoints
             app.MapGrpcService<AccountGrpcService>();
+            app.MapGrpcService<EnhancedAccountGrpcService>();
+            app.MapGrpcService<TradingGrpcService>();
             app.MapGet("/", () => "CoreBanking API is running. Use /swagger for REST or a gRPC client for gRPC calls.");
             if (app.Environment.IsDevelopment())
             {

@@ -27,49 +27,73 @@ public class AccountGrpcService : AccountService.AccountServiceBase
     {
         _logger.LogInformation("gRPC GetAccount called for {AccountNumber}", request.AccountNumber);
 
-        var query = new GetAccountDetailsQuery
+        // Validate input
+        if (string.IsNullOrWhiteSpace(request.AccountNumber))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Account number is required"));
+
+        try
         {
-            AccountNumber = AccountNumber.Create(request.AccountNumber)
-        };
+            var query = new GetAccountDetailsQuery
+            {
+                AccountNumber = AccountNumber.Create(request.AccountNumber)
+            };
 
-        var result = await _mediator.Send(query);
+            var result = await _mediator.Send(query);
 
-        if (!result.IsSuccess)
-            throw new RpcException(new Status(StatusCode.NotFound, string.Join(", ", result.Errors)));
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.NotFound, string.Join(", ", result.Errors)));
 
-        return _mapper.Map<AccountResponse>(result.Data!);
+            return _mapper.Map<AccountResponse>(result.Data!);
+        }
+        catch (Exception ex) when (ex is not RpcException)
+        {
+            _logger.LogError(ex, "Error retrieving account {AccountNumber}", request.AccountNumber);
+            throw new RpcException(new Status(StatusCode.Internal, "Internal server error"));
+        }
     }
 
     public override async Task<CreateAccountResponse> CreateAccount(CreateAccountRequest request,
         ServerCallContext context)
     {
+        _logger.LogInformation("gRPC CreateAccount called for customer {CustomerId}", request.CustomerId);
+
         if (!Guid.TryParse(request.CustomerId, out var customerGuid))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid customer ID format"));
 
-        var command = new CreateAccountCommand
+        try
         {
-            CustomerId = CustomerId.Create(customerGuid),
-            AccountType = request.AccountType,
-            InitialDeposit = (decimal)request.InitialDeposit,
-            Currency = request.Currency
-        };
+            var command = new CreateAccountCommand
+            {
+                CustomerId = CustomerId.Create(customerGuid),
+                AccountType = request.AccountType,
+                InitialDeposit = (decimal)request.InitialDeposit,
+                Currency = request.Currency
+            };
 
-        var result = await _mediator.Send(command);
+            var result = await _mediator.Send(command);
 
-        if (!result.IsSuccess)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, string.Join(", ", result.Errors)));
+            if (!result.IsSuccess)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, string.Join(", ", result.Errors)));
 
-        return new CreateAccountResponse
+            return new CreateAccountResponse
+            {
+                AccountId = result.Data!.ToString(),
+                AccountNumber = "TEMP", // Would come from the created account
+                Message = "Account created successfully"
+            };
+        }
+        catch (Exception ex) when (ex is not RpcException)
         {
-            AccountId = result.Data!.ToString(),
-            AccountNumber = "TEMP", // Would come from the created account
-            Message = "Account created successfully"
-        };
+            _logger.LogError(ex, "Error creating account for customer {CustomerId}", request.CustomerId);
+            throw new RpcException(new Status(StatusCode.Internal, "Internal server error"));
+        }
     }
 
     public override async Task<TransferMoneyResponse> TransferMoney(TransferMoneyRequest request,
         ServerCallContext context)
     {
+        _logger.LogInformation("gRPC TransferMoney initiated");
+
         var command = new TransferMoneyCommand
         {
             SourceAccountNumber = AccountNumber.Create(request.SourceAccountNumber),
