@@ -1,5 +1,4 @@
-﻿// CoreBanking.Infrastructure/Data/BankingDbContext.cs
-using CoreBanking.Core.Common;
+﻿using CoreBanking.Core.Common;
 using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
 using CoreBanking.Core.Interfaces;
@@ -141,6 +140,9 @@ namespace CoreBanking.Infrastructure.Data
                     LastName = "Johnson",
                     Email = "alice.johnson@email.com",
                     PhoneNumber = "555-0101",
+                    BVN = "20000000009",
+                    CreditScore = 40,
+                    DateOfBirth = DateTime.UtcNow.AddYears(-30),
                     DateCreated = DateTime.UtcNow.AddDays(-30),
                     IsActive = true,
                     IsDeleted = false

@@ -4,6 +4,7 @@ using CoreBanking.API.Models.Requests;
 using CoreBanking.Application.Customers.Commands.CreateCustomer;
 using CoreBanking.Application.Customers.Queries.GetCustomerDetails;
 using CoreBanking.Application.Customers.Queries.GetCustomers;
+using CoreBanking.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -63,6 +64,6 @@ public class CustomersController : ControllerBase
         return CreatedAtAction(
             nameof(GetCustomer),
              new { customerId = result.Data },
-            ApiResponse<Guid>.CreateSuccess(result.Data!));
+            ApiResponse<CustomerId>.CreateSuccess(result.Data!));
     }
 }
