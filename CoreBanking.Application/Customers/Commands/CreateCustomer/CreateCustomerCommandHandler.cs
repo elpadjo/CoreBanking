@@ -59,14 +59,17 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
             }
 
             // Step 3: Create customer entity
+            var address = new Address(request.Street, request.City, request.State, request.ZipCode, request.Country);
+            var contactInfo = new ContactInfo(request.Email, request.PhoneNumber, address);
+
             var customer = new Customer(
                 request.FirstName,
                 request.LastName,
-                request.Email,
-                request.PhoneNumber,
+                contactInfo,
                 request.DateOfBirth,
                 request.BVN,
-                creditScore.Score);
+                creditScore.Score
+            );
 
             await _customerRepository.AddAsync(customer, cancellationToken);
             var affectedRows = await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -78,9 +81,9 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
             }
 
             _logger.LogInformation("Successfully created customer {CustomerId} with credit score {Score}",
-                customer.CustomerId, creditScore.Score);
+                customer.Id, creditScore.Score);
 
-            return Result<CustomerId>.Success(customer.CustomerId);
+            return Result<CustomerId>.Success(customer.Id);
         }
         catch (ExternalServiceException ex)
         {

@@ -44,7 +44,7 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
         await _accountRepository.AddAsync(account);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<Guid>.Success(account.AccountId.Value);
+        return Result<Guid>.Success(account.Id.Value);
     }
 
     private async Task<AccountNumber> GenerateUniqueAccountNumberAsync()

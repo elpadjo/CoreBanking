@@ -12,13 +12,15 @@ namespace CoreBanking.API.gRPC.Mappings
         {
             CreateMap<AccountDetailsDto, AccountResponse>()
                 .ForMember(dest => dest.AccountNumber, opt => opt.MapFrom(src => src.AccountNumber))
-                .ForMember(dest => dest.AccountType, opt => opt.MapFrom(src => src.AccountType))
-                .ForMember(dest => dest.Balance, opt => opt.MapFrom(src => src.Balance.Amount))
-                .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Balance.Currency))
+                .ForMember(dest => dest.AccountType, opt => opt.MapFrom(src => src.AccountType.ToString()))
+                //.ForMember(dest => dest.CurrentBalance, opt => opt.MapFrom(src => src.CurrentBalance)) 
+                //.ForMember(dest => dest.AvailableBalance, opt => opt.MapFrom(src => src.AvailableBalance)) 
+                .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => "USD"))
                 .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.CustomerName))
                 .ForMember(dest => dest.DateOpened, opt => opt.MapFrom(src =>
-                    Timestamp.FromDateTime(DateTime.SpecifyKind(src.DateOpened, DateTimeKind.Utc))))
-                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
+                    Timestamp.FromDateTime(DateTime.SpecifyKind(src.DateOpened, DateTimeKind.Utc))));
+                //.ForMember(dest => dest.AccountStatus, opt => opt.MapFrom(src => src.AccountStatus.ToString()))
+
 
             CreateMap<TransactionDto, TransactionResponse>()
                 .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.TransactionId))

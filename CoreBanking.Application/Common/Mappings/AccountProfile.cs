@@ -15,9 +15,13 @@ public class AccountProfile : Profile
     {
         // Domain Entity to DTO mappings
         CreateMap<Account, AccountDetailsDto>()
-            .ForMember(dest => dest.AccountNumber, opt => opt.MapFrom(src => src.AccountNumber.Value))
-            .ForMember(dest => dest.AccountType, opt => opt.MapFrom(src => src.AccountType.ToString()))
-            .ForMember(dest => dest.Balance, opt => opt.MapFrom(src => src.Balance.Amount))
+            .ForMember(dest => dest.AccountNumber, opt => opt.MapFrom(src => src.AccountNumber.ToString()))
+            .ForMember(dest => dest.AccountType, opt => opt.MapFrom(src => src.AccountType))
+            .ForMember(dest => dest.CurrentBalance, opt => opt.MapFrom(src => src.CurrentBalance.Amount))
+            .ForMember(dest => dest.AvailableBalance, opt => opt.MapFrom(src => src.AvailableBalance.Amount))
+            .ForMember(dest => dest.DateOpened, opt => opt.MapFrom(src => src.DateOpened))
+            .ForMember(dest => dest.AccountStatus, opt => opt.MapFrom(src => src.AccountStatus))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId.ToString()))
             .ForMember(dest => dest.CustomerName,
                 opt => opt.MapFrom(src => $"{src.Customer.FirstName} {src.Customer.LastName}"));
 
@@ -33,7 +37,7 @@ public class AccountProfile : Profile
 
         // Transaction mappings
         CreateMap<Transaction, TransactionDto>()
-            .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.TransactionId.Value.ToString()))
+            .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.Id.Value.ToString()))
             .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()))
             .ForMember(dest => dest.Amount, opt => opt.MapFrom(src => src.Amount.Amount))
             .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Amount.Currency));

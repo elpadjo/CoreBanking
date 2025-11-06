@@ -6,6 +6,7 @@
         Withdrawal = 2,
         TransferIn = 3,    // Money coming into account
         TransferOut = 4,   // Money leaving account
-        Interest = 5
+        Interest = 5,
+        Fee = 6,
     }
 }

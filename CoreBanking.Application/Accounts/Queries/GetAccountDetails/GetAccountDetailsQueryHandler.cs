@@ -1,4 +1,6 @@
 ﻿using CoreBanking.Application.Common.Models;
+using CoreBanking.Core.Entities;
+using CoreBanking.Core.Enums;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.ValueObjects;
 using MediatR;
@@ -23,11 +25,13 @@ namespace CoreBanking.Application.Accounts.Queries.GetAccountDetails
 
             var dto = new AccountDetailsDto
             {
-                AccountNumber = account.AccountNumber,
-                AccountType = account.AccountType.ToString(),
-                Balance = new Money(account.Balance.Amount, account.Balance.Currency),
+                AccountNumber = account.AccountNumber.ToString(),
+                AccountType = account.AccountType,
+                CurrentBalance = account.CurrentBalance.Amount,
+                AvailableBalance = account.AvailableBalance.Amount,
                 DateOpened = account.DateOpened,
-                IsActive = account.IsActive,
+                AccountStatus = account.AccountStatus,
+                CustomerId = account.CustomerId.ToString(),
                 CustomerName = $"{account.Customer.FirstName} {account.Customer.LastName}"
             };
 

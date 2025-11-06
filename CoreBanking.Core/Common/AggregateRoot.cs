@@ -5,6 +5,10 @@ namespace CoreBanking.Core.Common;
 
 public abstract class AggregateRoot<TId> : IAggregateRoot where TId : notnull
 {
+    public TId Id { get; protected set; }
+    public DateTime DateCreated { get; protected set; } = DateTime.UtcNow;
+    public DateTime DateUpdated { get; protected set; } = DateTime.UtcNow;
+
     [NotMapped]
     private readonly List<IDomainEvent> _domainEvents = new();
 
@@ -14,4 +18,6 @@ public abstract class AggregateRoot<TId> : IAggregateRoot where TId : notnull
     protected void AddDomainEvent(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
 
     public void ClearDomainEvents() => _domainEvents.Clear();
+
+    protected void UpdateTimestamp() => DateUpdated = DateTime.UtcNow;
 }

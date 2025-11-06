@@ -19,7 +19,7 @@ namespace CoreBanking.Infrastructure.Repositories
         {
             return await _context.Customers
                 .Include(c => c.Accounts)
-                .FirstOrDefaultAsync(c => c.CustomerId == customerId, cancellationToken);
+                .FirstOrDefaultAsync(c => c.Id == customerId, cancellationToken);
         }
 
         public async Task<IEnumerable<Customer>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -43,7 +43,7 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task<bool> ExistsAsync(CustomerId customerId, CancellationToken cancellationToken = default)
         {
             return await _context.Customers
-                .AnyAsync(c => c.CustomerId == customerId, cancellationToken);
+                .AnyAsync(c => c.Id == customerId, cancellationToken);
         }
     }
 }

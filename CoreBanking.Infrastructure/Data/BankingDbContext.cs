@@ -34,15 +34,15 @@ namespace CoreBanking.Infrastructure.Data
             // Customer configuration
             modelBuilder.Entity<Customer>(entity =>
             {
-                entity.HasKey(c => c.CustomerId);
-                entity.Property(c => c.CustomerId)
+                entity.HasKey(c => c.Id);
+                entity.Property(c => c.Id)
                     .HasConversion(customerId => customerId.Value,
                                 value => CustomerId.Create(value));
 
                 entity.Property(c => c.FirstName).IsRequired().HasMaxLength(100);
                 entity.Property(c => c.LastName).IsRequired().HasMaxLength(100);
-                entity.Property(c => c.Email).IsRequired().HasMaxLength(255);
-                entity.Property(c => c.PhoneNumber).HasMaxLength(20);
+                //entity.Property(c => c.Email).IsRequired().HasMaxLength(255);
+                //entity.Property(c => c.PhoneNumber).HasMaxLength(20);
 
                 // Customer has many Accounts
                 entity.HasMany(c => c.Accounts)
@@ -53,8 +53,8 @@ namespace CoreBanking.Infrastructure.Data
             // Account configuration
             modelBuilder.Entity<Account>(entity =>
             {
-                entity.HasKey(a => a.AccountId);
-                entity.Property(c => c.AccountId)
+                entity.HasKey(a => a.Id);
+                entity.Property(c => c.Id)
                     .HasConversion(AccountId => AccountId.Value,
                                 value => AccountId.Create(value));
 
@@ -68,7 +68,7 @@ namespace CoreBanking.Infrastructure.Data
                     .IsRequired();
 
                 // Configure Money as owned type (Value Object)
-                entity.OwnsOne(a => a.Balance, money =>
+                /*entity.OwnsOne(a => a.Balance, money =>
                 {
                     money.Property(m => m.Amount)
                         .HasColumnName("Amount")
@@ -77,7 +77,7 @@ namespace CoreBanking.Infrastructure.Data
                         .HasColumnName("Currency")
                         .HasMaxLength(3)
                         .HasDefaultValue("NGN");
-                });
+                });*/
 
                 entity.Property(a => a.AccountType)
                     .HasConversion<string>()
@@ -95,8 +95,8 @@ namespace CoreBanking.Infrastructure.Data
             // Transaction configuration
             modelBuilder.Entity<Transaction>(entity =>
             {
-                entity.HasKey(t => t.TransactionId);
-                entity.Property(c => c.TransactionId)
+                entity.HasKey(t => t.Id);
+                entity.Property(c => c.Id)
                     .HasConversion(TransactionId => TransactionId.Value,
                                 value => TransactionId.Create(value));
 
@@ -117,7 +117,7 @@ namespace CoreBanking.Infrastructure.Data
 
                 entity.Property(t => t.Description).HasMaxLength(500);
                 entity.Property(t => t.Reference).HasMaxLength(50);
-                entity.Property(t => t.Timestamp).IsRequired();
+                entity.Property(t => t.DateCreated).IsRequired();
             });
 
             // Global query filter in DbContext - Automatically Exclude Deleted Records
@@ -162,14 +162,14 @@ namespace CoreBanking.Infrastructure.Data
             );
 
             // Then configure the owned types separately
-            modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(
+            /*modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(
                 new
                 {
                     AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
                     Amount = 1500.00m,
                     Currency = "NGN"
                 }
-            );
+            );*/
 
         }
 

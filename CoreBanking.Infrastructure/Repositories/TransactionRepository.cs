@@ -18,14 +18,14 @@ public class TransactionRepository : ITransactionRepository
     public async Task<Transaction?> GetByIdAsync(TransactionId transactionId, CancellationToken cancellationToken = default)
     {
         return await _context.Transactions
-            .FirstOrDefaultAsync(t => t.TransactionId == transactionId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Id == transactionId, cancellationToken);
     }
 
     public async Task<IEnumerable<Transaction>> GetByAccountIdAsync(AccountId accountId, CancellationToken cancellationToken = default)
     {
         return await _context.Transactions
             .Where(t => t.AccountId == accountId)
-            .OrderByDescending(t => t.Timestamp)
+            .OrderByDescending(t => t.DateCreated)
             .ToListAsync(cancellationToken);
     }
 
@@ -33,9 +33,9 @@ public class TransactionRepository : ITransactionRepository
     {
         return await _context.Transactions
             .Where(t => t.AccountId == accountId &&
-                       t.Timestamp >= startDate &&
-                       t.Timestamp <= endDate)
-            .OrderBy(t => t.Timestamp)
+                       t.DateCreated >= startDate &&
+                       t.DateCreated <= endDate)
+            .OrderBy(t => t.DateCreated)
             .ToListAsync(cancellationToken);
     }
 

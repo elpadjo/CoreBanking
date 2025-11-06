@@ -22,7 +22,7 @@ namespace CoreBanking.Infrastructure.Repositories
             return await _context.Accounts
                 .Include(a => a.Customer) // ← Eager load Customer
                 .Include(a => a.Transactions)
-                .FirstOrDefaultAsync(a => a.AccountId == accountId);
+                .FirstOrDefaultAsync(a => a.Id == accountId);
         }
 
         public async Task<List<Account>> GetAllAsync()
@@ -64,13 +64,13 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task UpdateAccountBalanceAsync(AccountId accountId, Money newBalance)
         {
             var account = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.AccountId == accountId);
+                .FirstOrDefaultAsync(a => a.Id == accountId);
 
             if (account == null)
                 throw new InvalidOperationException("Account not found.");
 
             // Replace the value object
-            account.UpdateBalance(newBalance);
+            //account.UpdateBalance(newBalance);
 
             try
             {

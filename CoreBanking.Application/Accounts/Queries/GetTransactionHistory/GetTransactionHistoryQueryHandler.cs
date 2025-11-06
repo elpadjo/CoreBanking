@@ -25,34 +25,34 @@ namespace CoreBanking.Application.Accounts.Queries.GetTransactionHistory
                 return Result<TransactionHistoryDto>.Failure("Account not found");
 
             // Start with IQueryable or IEnumerable from repository
-            var transactionsQuery = (await _transactionRepository.GetByAccountIdAsync(account.AccountId, cancellationToken))
+            var transactionsQuery = (await _transactionRepository.GetByAccountIdAsync(account.Id, cancellationToken))
                 .AsQueryable(); // Or keep as IEnumerable
 
             // Apply date filtering
             if (request.StartDate.HasValue)
-                transactionsQuery = transactionsQuery.Where(t => t.Timestamp >= request.StartDate.Value);
+                transactionsQuery = transactionsQuery.Where(t => t.DateCreated >= request.StartDate.Value);
             if (request.EndDate.HasValue)
-                transactionsQuery = transactionsQuery.Where(t => t.Timestamp <= request.EndDate.Value);
+                transactionsQuery = transactionsQuery.Where(t => t.DateCreated <= request.EndDate.Value);
 
             // Get total count before pagination
             var totalCount = transactionsQuery.Count();
 
             // Apply pagination and execute query
             var pagedTransactions = transactionsQuery
-                .OrderByDescending(t => t.Timestamp)
+                .OrderByDescending(t => t.DateCreated)
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .ToList();
 
             var transactionDtos = pagedTransactions.Select(t => new TransactionDto
             {
-                TransactionId = TransactionId.Create(t.TransactionId.Value),
+                TransactionId = TransactionId.Create(t.Id.Value),
                 Type = t.Type.ToString(),
                 Amount = t.Amount.Amount,
                 Currency = t.Amount.Currency,
                 Description = t.Description,
                 Reference = t.Reference,
-                Timestamp = t.Timestamp
+                Timestamp = t.DateCreated
             }).ToList();
 
             var dto = new TransactionHistoryDto

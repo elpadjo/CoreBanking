@@ -1,14 +1,17 @@
-﻿using CoreBanking.Core.ValueObjects;
+﻿using CoreBanking.Core.Enums;
+using CoreBanking.Core.ValueObjects;
 
 namespace CoreBanking.Application.Accounts.Queries.GetAccountDetails
 {
     public record AccountDetailsDto
     {
         public string AccountNumber { get; init; } = string.Empty;
-        public string AccountType { get; init; } = string.Empty;
-        public Money Balance { get; init; } = new Money(0);
+        public AccountType AccountType { get; init; }
+        public decimal CurrentBalance { get; init; } 
+        public decimal AvailableBalance { get; init; }
         public DateTime DateOpened { get; init; }
-        public bool IsActive { get; init; }
+        public AccountStatus AccountStatus { get; init; } 
         public string CustomerName { get; init; } = string.Empty;
+        public string CustomerId { get; init; } = string.Empty; 
     }
 }
