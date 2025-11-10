@@ -10,6 +10,7 @@ using CoreBanking.Application.Accounts.EventHandlers;
 using CoreBanking.Application.Common.Behaviors;
 using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Application.Common.Mappings;
+using CoreBanking.Application.Common.Models;
 using CoreBanking.Application.External.HttpClients;
 using CoreBanking.Application.External.Interfaces;
 using CoreBanking.Core.Events;
@@ -17,6 +18,7 @@ using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
 using CoreBanking.Infrastructure.External.Resilience;
 using CoreBanking.Infrastructure.Repositories;
+using CoreBanking.Infrastructure.ServiceBus;
 using CoreBanking.Infrastructure.Services;
 using FluentValidation;
 using MediatR;
@@ -46,11 +48,24 @@ namespace CoreBanking.API
             builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+            builder.Services.AddSingleton<IEventPublisher, ServiceBusEventPublisher>();
+            builder.Services.AddScoped<IDomainEventDispatcher, ServiceBusEventDispatcher>();
             builder.Services.AddHttpClient<ICreditScoringServiceClient, CreditScoringServiceClient>(client =>
             {
                 client.BaseAddress = new Uri(builder.Configuration["CreditScoringApi:BaseUrl"] ?? "https://api.example.com");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
             });
+
+            // Add simulated external services
+            builder.Services.AddSingleton<ISimulatedCreditScoringService, SimulatedCreditScoringService>();
+
+            // Add Azure Service Bus (simulated for now - will configure properly in subscequent class)
+            /*builder.Services.AddSingleton<IServiceBusSender>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<ServiceBusSender>>();
+                // For today, we'll use a mock. Tomorrow we'll add real Azure Service Bus connection
+                return new MockServiceBusSender(logger);
+            });*/
 
             // Event handlers
             builder.Services.AddTransient<INotificationHandler<AccountCreatedEvent>, AccountCreatedEventHandler>();
@@ -89,6 +104,8 @@ namespace CoreBanking.API
 
             // Add resilience services
             builder.Services.AddSingleton<IResilientHttpClientService, ResilientHttpClientService>();
+            builder.Services.Configure<ResilienceOptions>(builder.Configuration.GetSection("Resilience"));
+            builder.Services.AddScoped<IResilienceService, ResilienceService>();
 
             // Register Polly policies
             builder.Services.AddSingleton(HttpPolicyExtensions
@@ -103,6 +120,9 @@ namespace CoreBanking.API
                         logger?.LogWarning("Retry {RetryCount} after {Delay}ms",
                             retryCount, timespan.TotalMilliseconds);
                     }));
+
+            // Add advanced Polly policies
+            builder.Services.AddSingleton<AdvancedPollyPolicies>();
 
             // MediatR setup
             builder.Services.AddMediatR(cfg =>

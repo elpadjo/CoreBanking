@@ -66,4 +66,32 @@ public class CustomersController : ControllerBase
              new { customerId = result.Data },
             ApiResponse<CustomerId>.CreateSuccess(result.Data!));
     }
+
+    [HttpPost]
+    public async Task<IActionResult> EnhancedCreateCustomer([FromBody] CreateCustomerRequest request)
+    {
+        _logger.LogInformation("Received customer creation request for {Email}", request.Email);
+
+        var command = new CreateCustomerCommand
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            PhoneNumber = request.Phone,
+            BVN = request.BVN,
+            Address = request.Address,
+            DateOfBirth = request.DateOfBirth
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            _logger.LogInformation("Successfully created customer with ID {CustomerId}", result.Data);
+            return Ok(ApiResponse<CustomerId>.CreateSuccess(result.Data, "Customer created successfully"));
+        }
+
+        _logger.LogWarning("Failed to create customer: {Error}", result.Errors);
+        return BadRequest(ApiResponse<object>.CreateFailure(result.Errors));
+    }
 }

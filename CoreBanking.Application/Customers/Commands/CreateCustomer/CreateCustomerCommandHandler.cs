@@ -5,6 +5,7 @@ using CoreBanking.Application.External.DTOs;
 using CoreBanking.Application.External.Interfaces;
 using CoreBanking.Core.Entities;
 using CoreBanking.Core.Interfaces;
+using CoreBanking.Core.Models;
 using CoreBanking.Core.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ using System.Text.Json;
 
 namespace CoreBanking.Application.Customers.Commands.CreateCustomer;
 
-public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerCommand, Result<CustomerId>>
+    public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerCommand, Result<CustomerId>>
 {
     private readonly ICustomerRepository _customerRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -21,6 +22,8 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
     private readonly ICreditScoringServiceClient _creditScoringClient;
     private readonly IResilientHttpClientService _resilientClient;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ISimulatedCreditScoringService _creditScoringService;
+    private readonly IResilienceService _resilienceService;
 
     public CreateCustomerCommandHandler(
         ICustomerRepository customerRepository,
@@ -28,7 +31,9 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
         ILogger<CreateCustomerCommandHandler> logger,
         ICreditScoringServiceClient creditScoringClient,
         IResilientHttpClientService resilientClient,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ISimulatedCreditScoringService creditScoringService,
+        IResilienceService resilienceService)
     {
         _customerRepository = customerRepository;
         _unitOfWork = unitOfWork;
@@ -36,29 +41,53 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
         _creditScoringClient = creditScoringClient;
         _resilientClient = resilientClient;
         _httpClientFactory = httpClientFactory;
-    }
+        _creditScoringService = creditScoringService;
+        _resilienceService = resilienceService;
+    }    
 
     public async Task<Result<CustomerId>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating customer for {Email}", request.Email);
+        _logger.LogInformation("Starting customer creation process for {Email}", request.Email);
 
         try
         {
             // Step 1: Validate customer with external BVN service
-            var bvnValidationResult = await ValidateBVNWithResilienceAsync(request, cancellationToken);
+            /*var bvnValidationResult = await ValidateBVNWithResilienceAsync(request, cancellationToken);
             if (!bvnValidationResult.IsValid)
             {
                 return Result<CustomerId>.Failure($"BVN validation failed: {bvnValidationResult.Reason}");
+            }*/
+
+            // Validate BVN with advanced resilience
+            var bvnValidationResult = await ValidateBVNWithAdvancedResilienceAsync(request.BVN, cancellationToken);
+            if (!bvnValidationResult.IsValid)
+            {
+                return Result<CustomerId>.Failure($"BVN validation failed: {bvnValidationResult.Message}");
+            }
+
+            // Validate customer details
+            var customerValidation = await ValidateCustomerDetailsWithResilienceAsync(request, cancellationToken);
+            if (!customerValidation.IsValid)
+            {
+                return Result<CustomerId>.Failure($"Customer validation failed: {customerValidation.Reason}");
             }
 
             // Step 2: Check credit score with resilience
-            var creditScore = await GetCreditScoreWithResilienceAsync(request.BVN, cancellationToken);
+            /*var creditScore = await GetCreditScoreWithResilienceAsync(request.BVN, cancellationToken);
             if (!creditScore.IsSuccess || creditScore.Score < 300)
             {
                 return Result<CustomerId>.Failure("Credit score below minimum requirement");
+            }*/
+
+            // Get credit score with circuit breaker protection
+            var creditScore = await GetCreditScoreWithCircuitBreakerAsync(request.BVN, cancellationToken);
+            if (!creditScore.IsSuccess || creditScore.Score < 350)
+            {
+                return Result<CustomerId>.Failure(
+                    $"Credit score {creditScore.Score} below minimum requirement (350)");
             }
 
-            // Step 3: Create customer entity
+            // Step 4: Create customer entity
             var customer = new Customer(
                 request.FirstName,
                 request.LastName,
@@ -79,6 +108,9 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
 
             _logger.LogInformation("Successfully created customer {CustomerId} with credit score {Score}",
                 customer.CustomerId, creditScore.Score);
+
+            // Step 5: Publish customer created event
+            await PublishCustomerCreatedEvent(customer, creditScore);
 
             return Result<CustomerId>.Success(customer.CustomerId);
         }
@@ -137,5 +169,47 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
             async (ct) => await _creditScoringClient.GetCreditScoreAsync(BVN, ct),
             "CreditScoreLookup",
             cancellationToken);
+    }
+
+    private async Task<SimulatedBVNResponse> ValidateBVNWithAdvancedResilienceAsync(
+    string bvn, CancellationToken cancellationToken)
+    {
+        return await _resilienceService.ExecuteWithResilienceAsync(
+            async (ct) => await _creditScoringService.ValidateBVNAsync(bvn, ct),
+            $"BVNValidation-{bvn}",
+            cancellationToken);
+    }
+
+    private async Task<SimulatedValidationResponse> ValidateCustomerDetailsWithResilienceAsync(
+        CreateCustomerCommand request, CancellationToken cancellationToken)
+    {
+        var validationRequest = new SimulatedValidationRequest
+        {
+            BVN = request.BVN,
+            FullName = $"{request.FirstName} {request.LastName}",
+            DateOfBirth = request.DateOfBirth
+        };
+
+        return await _resilientClient.ExecuteWithResilienceAsync(
+            async (ct) => await _creditScoringService.ValidateCustomerAsync(validationRequest, ct),
+            "CustomerValidation",
+            cancellationToken);
+    }
+
+    private async Task<SimulatedCreditScoreResponse> GetCreditScoreWithCircuitBreakerAsync(
+        string bvn, CancellationToken cancellationToken)
+    {
+        return await _resilienceService.ExecuteWithResilienceAsync(
+            async (ct) => await _creditScoringService.GetCreditScoreAsync(bvn, ct),
+            $"CreditScoreLookup-{bvn}",
+            cancellationToken);
+    }
+
+    private async Task PublishCustomerCreatedEvent(Customer customer, SimulatedCreditScoreResponse creditScore)
+    {
+        // This will be implemented in Day 10 with Azure Service Bus
+        _logger.LogInformation(
+            "Would publish CustomerCreatedEvent for {CustomerId} with credit band {Band}",
+            customer.CustomerId, creditScore.Band);
     }
 }
