@@ -5,6 +5,8 @@ public record ContactInfo
     public string PhoneNumber { get; }
     public Address Address { get; }
 
+    private ContactInfo() { }
+
     public ContactInfo(string email, string phoneNumber, Address address)
     {
         if (string.IsNullOrWhiteSpace(email))
