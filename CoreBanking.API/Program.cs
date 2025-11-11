@@ -60,12 +60,17 @@ namespace CoreBanking.API
             builder.Services.AddSingleton<ISimulatedCreditScoringService, SimulatedCreditScoringService>();
 
             // Add Azure Service Bus (simulated for now - will configure properly in subscequent class)
-            /*builder.Services.AddSingleton<IServiceBusSender>(provider =>
+            builder.Services.AddSingleton<IServiceBusSender>(provider =>
             {
                 var logger = provider.GetRequiredService<ILogger<ServiceBusSender>>();
-                // For today, we'll use a mock. Tomorrow we'll add real Azure Service Bus connection
-                return new MockServiceBusSender(logger);
-            });*/
+                var configuration = provider.GetRequiredService<IConfiguration>();
+
+                // For development, use a mock connection string
+                var connectionString = configuration.GetConnectionString("ServiceBus")
+                    ?? "Endpoint=sb://mock-servicebus/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mock";
+
+                return new ServiceBusSender(connectionString, logger);
+            });
 
             // Event handlers
             builder.Services.AddTransient<INotificationHandler<AccountCreatedEvent>, AccountCreatedEventHandler>();

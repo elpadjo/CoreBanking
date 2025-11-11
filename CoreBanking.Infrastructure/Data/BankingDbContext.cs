@@ -134,34 +134,36 @@ namespace CoreBanking.Infrastructure.Data
             });
 
             // Seed the DB
-            modelBuilder.Entity<Customer>().HasData(new {
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    FirstName = "Alice",
-                    LastName = "Johnson",
-                    Email = "alice.johnson@email.com",
-                    PhoneNumber = "555-0101",
-                    BVN = "20000000009",
-                    CreditScore = 40,
-                    DateOfBirth = DateTime.UtcNow.AddYears(-30),
-                    DateCreated = DateTime.UtcNow.AddDays(-30),
-                    IsActive = true,
-                    IsDeleted = false
-                }
-            );
+            modelBuilder.Entity<Customer>().HasData(new
+            {
+                CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                FirstName = "Alice",
+                LastName = "Johnson",
+                Email = "alice.johnson@email.com",
+                PhoneNumber = "555-0101",
+                BVN = "20000000009",
+                CreditScore = 40,
+                // Use static, fixed dates instead of DateTime.UtcNow.AddX
+                DateOfBirth = new DateTime(1995, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateCreated = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                IsActive = true,
+                IsDeleted = false
+            });
 
-            modelBuilder.Entity<Account>().HasData(new {
-                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
-                    AccountNumber = AccountNumber.Create("1000000001"),
-                    AccountType = AccountType.Checking, // EF handles enum conversion
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    Currency = "NGN",
-                    DateOpened = DateTime.UtcNow.AddDays(-20),
-                    IsActive = true,
-                    IsDeleted = false            
-                }
-            );
+            modelBuilder.Entity<Account>().HasData(new
+            {
+                AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                AccountNumber = AccountNumber.Create("1000000001"),
+                AccountType = AccountType.Checking,
+                CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                Currency = "NGN",
+                // Also use a static date for DateOpened
+                DateOpened = new DateTime(2024, 10, 10, 0, 0, 0, DateTimeKind.Utc),
+                IsActive = true,
+                IsDeleted = false
+            });
 
-            // Then configure the owned types separately
+            // Owned type seeding stays the same
             modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(
                 new
                 {

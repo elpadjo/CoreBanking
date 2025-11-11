@@ -50,7 +50,7 @@ public class CustomersController : ControllerBase
         return Ok(ApiResponse<CustomerDetailsDto>.CreateSuccess(result.Data!));
     }
 
-    [HttpPost]
+    [HttpPost("ordinary")]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<Guid>>> CreateCustomer([FromBody] CreateCustomerRequest request)
