@@ -18,6 +18,7 @@ namespace CoreBanking.Infrastructure.Data
         public DbSet<Customer> Customers => Set<Customer>();
         public DbSet<Account> Accounts => Set<Account>();
         public DbSet<Transaction> Transactions => Set<Transaction>();
+        public DbSet<Hold> Holds => Set<Hold>();
         public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!; // Uses this style to effect Outbox pattern
         public DbSet<DomainEvent> DomainEvents { get; set; }
 
@@ -30,6 +31,9 @@ namespace CoreBanking.Infrastructure.Data
 
             modelBuilder.Ignore<DomainEvent>();
             modelBuilder.Ignore<IDomainEvent>();
+            modelBuilder.Ignore<AccountId>();
+            modelBuilder.Ignore<ContactInfo>();
+
 
             // Customer configuration
             modelBuilder.Entity<Customer>(entity =>
@@ -68,7 +72,7 @@ namespace CoreBanking.Infrastructure.Data
                     .IsRequired();
 
                 // Configure Money as owned type (Value Object)
-                /*entity.OwnsOne(a => a.Balance, money =>
+                entity.OwnsOne(a => a.CurrentBalance, money =>
                 {
                     money.Property(m => m.Amount)
                         .HasColumnName("Amount")
@@ -77,7 +81,18 @@ namespace CoreBanking.Infrastructure.Data
                         .HasColumnName("Currency")
                         .HasMaxLength(3)
                         .HasDefaultValue("NGN");
-                });*/
+                });
+
+                entity.OwnsOne(a => a.AvailableBalance, money =>
+                {
+                    money.Property(m => m.Amount)
+                        .HasColumnName("Amount")
+                        .HasPrecision(18, 2);
+                    money.Property(m => m.Currency)
+                        .HasColumnName("Currency")
+                        .HasMaxLength(3)
+                        .HasDefaultValue("NGN");
+                });
 
                 entity.Property(a => a.AccountType)
                     .HasConversion<string>()
@@ -91,7 +106,7 @@ namespace CoreBanking.Infrastructure.Data
                 // Ensure we don't accidentally load all transactions
                 entity.Navigation(a => a.Transactions).AutoInclude(false);
             });
-
+            
             // Transaction configuration
             modelBuilder.Entity<Transaction>(entity =>
             {
@@ -99,6 +114,12 @@ namespace CoreBanking.Infrastructure.Data
                 entity.Property(c => c.Id)
                     .HasConversion(TransactionId => TransactionId.Value,
                                 value => TransactionId.Create(value));
+
+                entity.Property(c => c.AccountId)
+                    .HasConversion(
+                        id => id.Value,
+                        value => AccountId.Create(value))
+                    .IsRequired();
 
                 // Configure Money as owned type
                 entity.OwnsOne(t => t.Amount, money =>
@@ -111,6 +132,11 @@ namespace CoreBanking.Infrastructure.Data
                         .HasMaxLength(3);
                 });
 
+                entity.Property(t => t.RunningBalance)
+                .HasColumnType("decimal")
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
                 entity.Property(t => t.Type)
                     .HasConversion<string>()
                     .IsRequired();
@@ -119,6 +145,72 @@ namespace CoreBanking.Infrastructure.Data
                 entity.Property(t => t.Reference).HasMaxLength(50);
                 entity.Property(t => t.DateCreated).IsRequired();
             });
+
+            //-----------------Hold Confuguration-----------------------
+            // Table name
+            modelBuilder.Entity<Hold>(entity => {
+
+                // Primary Key
+                entity.HasKey(h => h.Id);
+
+                // Configure value object conversions for IDs
+                entity.Property(h => h.Id)
+                    .HasConversion(
+                        id => id.Value,
+                        value => HoldId.Create(value))
+                    .IsRequired();
+
+                entity.Property(h => h.AccountId)
+                    .HasConversion(
+                        id => id.Value,
+                        value => AccountId.Create(value))
+                    .IsRequired();
+
+                // Configure Amount (Money value object)
+                entity.OwnsOne(h => h.Amount, money =>
+                {
+                    money.Property(m => m.Amount)
+                        .HasColumnName("Amount")
+                        .HasPrecision(18, 2)
+                        .IsRequired();
+
+                    money.Property(m => m.Currency)
+                        .HasColumnName("Currency")
+                        .HasMaxLength(3)
+                        .IsRequired();
+                });
+
+                // Description
+                entity.Property(h => h.Description)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                // PlacedAt
+                entity.Property(h => h.PlacedAt)
+                    .IsRequired();
+
+
+                // Soft delete fields
+                entity.Property(h => h.IsDeleted)
+                    .HasDefaultValue(false);
+
+                entity.Property(h => h.DeletedAt);
+                entity.Property(h => h.DeletedBy)
+                    .HasMaxLength(100);
+                
+                // Common audit fields
+                entity.Property<DateTime>("DateCreated").IsRequired();
+                entity.Property<DateTime>("DateUpdated").IsRequired();
+ 
+
+                // Relationship: One Account -> Many Holds
+                entity.HasOne(h => h.Account)
+                    .WithMany(a => a.Holds)
+                    .HasForeignKey(h => h.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+    
+            ///----------------------END OF HOLD CONFIGURATION----------------------
 
             // Global query filter in DbContext - Automatically Exclude Deleted Records
             modelBuilder.Entity<Customer>().HasQueryFilter(c => !c.IsDeleted);
@@ -135,41 +227,45 @@ namespace CoreBanking.Infrastructure.Data
 
             // Seed the DB
             modelBuilder.Entity<Customer>().HasData(new {
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    FirstName = "Alice",
-                    LastName = "Johnson",
-                    Email = "alice.johnson@email.com",
-                    PhoneNumber = "555-0101",
-                    BVN = "20000000009",
-                    CreditScore = 40,
-                    DateOfBirth = DateTime.UtcNow.AddYears(-30),
-                    DateCreated = DateTime.UtcNow.AddDays(-30),
-                    IsActive = true,
-                    IsDeleted = false
+                Id = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                FirstName = "Alice",
+                LastName = "Johnson",
+                Email = "alice.johnson@email.com",
+                PhoneNumber = "555-0101",
+                BVN = "20000000009",
+                CreditScore = 40,
+                DateOfBirth = DateTime.UtcNow.AddYears(-30),
+                DateCreated = DateTime.UtcNow.AddDays(-30),
+                DateUpdated = DateTime.UtcNow.AddDays(-20),
+                IsActive = true,
+                IsDeleted = false
                 }
             );
 
             modelBuilder.Entity<Account>().HasData(new {
-                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
-                    AccountNumber = AccountNumber.Create("1000000001"),
-                    AccountType = AccountType.Checking, // EF handles enum conversion
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    Currency = "NGN",
-                    DateOpened = DateTime.UtcNow.AddDays(-20),
-                    IsActive = true,
-                    IsDeleted = false            
+                Id = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                AccountNumber = AccountNumber.Create("1000000001"),
+                AccountType = AccountType.Checking, // EF handles enum conversion
+                AccountStatus = AccountStatus.Active,
+                CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                Currency = "NGN",
+                DateCreated = DateTime.UtcNow.AddDays(-20),
+                DateOpened = DateTime.UtcNow.AddDays(-20),
+                DateUpdated = DateTime.UtcNow.AddDays(-20),
+                IsActive = true,
+                IsDeleted = false            
                 }
             );
 
             // Then configure the owned types separately
-            /*modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(
+            modelBuilder.Entity<Account>().OwnsOne(a => a.CurrentBalance).HasData(
                 new
                 {
                     AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
                     Amount = 1500.00m,
                     Currency = "NGN"
                 }
-            );*/
+            );
 
         }
 

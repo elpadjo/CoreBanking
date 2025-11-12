@@ -3,6 +3,7 @@ using CoreBanking.API.gRPC.Services;
 using CoreBanking.API.Hubs;
 using CoreBanking.API.Hubs.EventHandlers;
 using CoreBanking.API.Hubs.Management;
+using CoreBanking.API.Mappings;
 using CoreBanking.API.Middleware;
 using CoreBanking.API.Services;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
@@ -12,6 +13,9 @@ using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Application.Common.Mappings;
 using CoreBanking.Application.External.HttpClients;
 using CoreBanking.Application.External.Interfaces;
+using CoreBanking.Application.Holds.Commands.CreateHold;
+using CoreBanking.Application.Holds.Commands.DeleteHold;
+using CoreBanking.Application.Holds.Commands.UpdateHold;
 using CoreBanking.Core.Events;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
@@ -22,6 +26,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
@@ -44,6 +49,7 @@ namespace CoreBanking.API
             builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
             builder.Services.AddScoped<IAccountRepository, AccountRepository>();
             builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+            builder.Services.AddScoped<IHoldRepository, HoldRepository>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
             builder.Services.AddHttpClient<ICreditScoringServiceClient, CreditScoringServiceClient>(client =>
@@ -108,6 +114,9 @@ namespace CoreBanking.API
             builder.Services.AddMediatR(cfg =>
             {
                 cfg.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
+                cfg.RegisterServicesFromAssembly(typeof(CreateHoldCommand).Assembly);
+                cfg.RegisterServicesFromAssembly(typeof(UpdateHoldCommand).Assembly);
+                cfg.RegisterServicesFromAssembly(typeof(DeleteHoldCommand).Assembly);
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
                 cfg.AddOpenBehavior(typeof(DomainEventsBehavior<,>));
@@ -115,8 +124,12 @@ namespace CoreBanking.API
 
             // Validation and mapping
             builder.Services.AddValidatorsFromAssembly(typeof(CreateAccountCommandValidator).Assembly);
+            builder.Services.AddValidatorsFromAssembly(typeof(CreateHoldCommandValidator).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountProfile).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountGrpcProfile).Assembly);
+            builder.Services.AddAutoMapper(cfg => { }, typeof(HoldMappingProfile).Assembly);
+            builder.Services.AddAutoMapper(cfg => { } , typeof(HoldProfile).Assembly);
+
 
             // Outbox
             builder.Services.AddScoped<IOutboxMessageProcessor, OutboxMessageProcessor>();
@@ -133,9 +146,13 @@ namespace CoreBanking.API
                     Version = "v1",
                     Description = "A modern banking API built with Clean Architecture, DDD, and CQRS"
                 });
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
             });
 
-            // Kestrel multi-protocol setup
+            //// Kestrel multi-protocol setup
             builder.WebHost.ConfigureKestrel(options =>
             {
                 // HTTP/1.1 for REST, Swagger, etc.
@@ -192,6 +209,8 @@ namespace CoreBanking.API
 
             // Root landing page
             app.MapGet("/", () => "CoreBanking API is running. Visit /swagger for REST or use gRPC client.");
+
+
 
             app.Run();
         }
