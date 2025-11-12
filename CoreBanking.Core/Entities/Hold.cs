@@ -113,6 +113,19 @@ namespace CoreBanking.Core.Entities
             return new Hold(accountId, amount, description, expiresAt);
         }
 
+        public static Hold CreateWithID(HoldId holdId, AccountId accountId, Money amount, string description, TimeSpan duration)
+        {
+            var expiresAt = DateTime.UtcNow + duration;
+            return new Hold
+            {
+                Id = holdId,
+                Amount = amount,
+                Description = description,
+                AccountId = accountId,
+                ExpiresAt = expiresAt
+            };
+        }
+
         public static Hold CreateForAuthorization(AccountId accountId, Money amount, string merchantName)
         {
             // Standard authorization hold duration (e.g., for card transactions)
@@ -127,6 +140,11 @@ namespace CoreBanking.Core.Entities
             var duration = TimeSpan.FromDays(5);
             var description = $"Check hold - {checkReference}";
             return Create(accountId, amount, description, duration);
+        }
+
+        public override string ToString()
+        {
+            return $"ID: {Id}, AccountId: {AccountId}, Money: {Amount.Amount}, Duration: {ExpiresAt}, Description: {Description})";
         }
     }
 }
