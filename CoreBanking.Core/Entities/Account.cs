@@ -27,8 +27,8 @@ namespace CoreBanking.Core.Entities
         private readonly List<Transaction> _transactions = new();
         public IReadOnlyCollection<Transaction> Transactions => _transactions.AsReadOnly();
 
-        private readonly List<Hold> _holds = new();
-        public IReadOnlyCollection<Hold> Holds => _holds.AsReadOnly();
+        //private readonly List<Hold> _holds = new();
+        //public IReadOnlyCollection<Hold> Holds => _holds.AsReadOnly();
 
         private Account() { } // EF Core needs this
 
@@ -247,36 +247,36 @@ namespace CoreBanking.Core.Entities
             return Result.Success();
         }
 
-        public void PlaceHold(Money amount, string description)
-        {
-            if (AccountStatus != AccountStatus.Active)
-                throw new InvalidOperationException("Cannot place hold on inactive account");
+        //public void PlaceHold(Money amount, string description)
+        //{
+        //    if (AccountStatus != AccountStatus.Active)
+        //        throw new InvalidOperationException("Cannot place hold on inactive account");
 
-            if (AvailableBalance.Amount < amount.Amount)
-                throw new InvalidOperationException("Cannot place hold - insufficient available funds");
+        //    if (AvailableBalance.Amount < amount.Amount)
+        //        throw new InvalidOperationException("Cannot place hold - insufficient available funds");
 
-            var hold = new Hold(Id, amount, description, DateTime.UtcNow);
-            _holds.Add(hold);
-            AvailableBalance = CurrentBalance - GetTotalHolds();
-            UpdateTimestamp();
+        //    var hold = new Hold(Id, amount, description, DateTime.UtcNow);
+        //    _holds.Add(hold);
+        //    AvailableBalance = CurrentBalance - GetTotalHolds();
+        //    UpdateTimestamp();
 
-            AddDomainEvent(new HoldPlacedEvent(Id, amount, description, AvailableBalance));
-        }
+        //    AddDomainEvent(new HoldPlacedEvent(Id, amount, description, AvailableBalance));
+        //}
 
-        public void RemoveHold(HoldId holdId)
-        {
-            var hold = _holds.FirstOrDefault(h => h.Id == holdId);
-            if (hold != null)
-            {
-                _holds.Remove(hold);
-                AvailableBalance = CurrentBalance - GetTotalHolds();
-                UpdateTimestamp();
+        //public void RemoveHold(HoldId holdId)
+        //{
+        //    var hold = _holds.FirstOrDefault(h => h.Id == holdId);
+        //    if (hold != null)
+        //    {
+        //        _holds.Remove(hold);
+        //        AvailableBalance = CurrentBalance - GetTotalHolds();
+        //        UpdateTimestamp();
 
-                AddDomainEvent(new HoldRemovedEvent(Id, hold.Amount, AvailableBalance));
-            }
-        }
+        //        AddDomainEvent(new HoldRemovedEvent(Id, hold.Amount, AvailableBalance));
+        //    }
+        //}
 
-        private Money GetTotalHolds() => new Money(_holds.Sum(h => h.Amount.Amount));
+        //private Money GetTotalHolds() => new Money(_holds.Sum(h => h.Amount.Amount));
 
         public void CloseAccount(string reason = "Customer request")
         {

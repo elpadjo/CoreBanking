@@ -22,11 +22,15 @@ namespace CoreBanking.Infrastructure.Repositories
                 .FirstOrDefaultAsync(c => c.Id == customerId, cancellationToken);
         }
 
-        public async Task<IEnumerable<Customer>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Customer>> GetAllAsync(int pageSize, int PageNumber, CancellationToken cancellationToken = default)
         {
             return await _context.Customers
                 .Include(c => c.Accounts)
+                .OrderByDescending(c => c.DateCreated)
+                .Skip((PageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync(cancellationToken);
+
         }
 
         public async Task AddAsync(Customer customer, CancellationToken cancellationToken = default)

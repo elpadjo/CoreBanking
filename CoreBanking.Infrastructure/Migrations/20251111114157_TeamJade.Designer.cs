@@ -4,6 +4,7 @@ using CoreBanking.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CoreBanking.Infrastructure.Migrations
 {
     [DbContext(typeof(BankingDbContext))]
-    partial class BankingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251111114157_TeamJade")]
+    partial class TeamJade
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,7 +88,7 @@ namespace CoreBanking.Infrastructure.Migrations
                             AccountType = "Checking",
                             CustomerId = new Guid("a1b2c3d4-1234-5678-9abc-123456789abc"),
                             DateCreated = new DateTime(2024, 10, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DateOpened = new DateTime(2025, 10, 23, 11, 57, 8, 60, DateTimeKind.Utc).AddTicks(5132),
+                            DateOpened = new DateTime(2025, 10, 22, 11, 41, 57, 127, DateTimeKind.Utc).AddTicks(4771),
                             DateUpdated = new DateTime(2024, 10, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsDeleted = false
                         });
@@ -344,26 +347,6 @@ namespace CoreBanking.Infrastructure.Migrations
                                 {
                                     b2.Property<Guid>("ContactInfoCustomerId")
                                         .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("City")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<string>("Country")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<string>("State")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<string>("Street")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<string>("ZipCode")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
 
                                     b2.HasKey("ContactInfoCustomerId");
 

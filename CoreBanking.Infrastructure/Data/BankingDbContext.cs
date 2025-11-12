@@ -30,6 +30,9 @@ namespace CoreBanking.Infrastructure.Data
 
             modelBuilder.Ignore<DomainEvent>();
             modelBuilder.Ignore<IDomainEvent>();
+            modelBuilder.Ignore<AccountId>();
+            modelBuilder.Ignore<ContactInfo>();
+            modelBuilder.Ignore<CustomerId>();
 
             // Customer configuration
             modelBuilder.Entity<Customer>(entity =>
@@ -38,6 +41,7 @@ namespace CoreBanking.Infrastructure.Data
                 entity.Property(c => c.Id)
                     .HasConversion(customerId => customerId.Value,
                                 value => CustomerId.Create(value));
+
 
                 entity.Property(c => c.FirstName).IsRequired().HasMaxLength(100);
                 entity.Property(c => c.LastName).IsRequired().HasMaxLength(100);
@@ -48,6 +52,30 @@ namespace CoreBanking.Infrastructure.Data
                 entity.HasMany(c => c.Accounts)
                     .WithOne(a => a.Customer)
                     .HasForeignKey(a => a.CustomerId);
+
+                entity.OwnsOne(c => c.ContactInfo, contact =>
+                {
+                    contact.Property(p => p.Email).IsRequired();
+                    contact.Property(p => p.PhoneNumber).IsRequired();
+
+                    contact.OwnsOne(p => p.Address, address =>
+                    {
+                        address.Property(p => p.Street).IsRequired();
+                        address.Property(p => p.City).IsRequired();
+                        address.Property(p => p.State).IsRequired();
+                        address.Property(p => p.ZipCode);
+                        address.Property(p => p.Country).IsRequired();
+                    });
+                });
+
+
+                //entity.OwnsOne(c => c.CustomerId, owned =>
+                //{
+                //    owned.Property(c => c.Value)
+                //         .HasColumnName("CustomerId")
+                //         .IsRequired();
+                //});
+
             });
 
             // Account configuration
@@ -68,7 +96,7 @@ namespace CoreBanking.Infrastructure.Data
                     .IsRequired();
 
                 // Configure Money as owned type (Value Object)
-                /*entity.OwnsOne(a => a.Balance, money =>
+                entity.OwnsOne(a => a.CurrentBalance, money =>
                 {
                     money.Property(m => m.Amount)
                         .HasColumnName("Amount")
@@ -77,7 +105,18 @@ namespace CoreBanking.Infrastructure.Data
                         .HasColumnName("Currency")
                         .HasMaxLength(3)
                         .HasDefaultValue("NGN");
-                });*/
+                });
+
+                entity.OwnsOne(a => a.AvailableBalance, money =>
+                {
+                    money.Property(m => m.Amount)
+                        .HasColumnName("Amount")
+                        .HasPrecision(18, 2);
+                    money.Property(m => m.Currency)
+                        .HasColumnName("Currency")
+                        .HasMaxLength(3)
+                        .HasDefaultValue("NGN");
+                });
 
                 entity.Property(a => a.AccountType)
                     .HasConversion<string>()
@@ -100,6 +139,23 @@ namespace CoreBanking.Infrastructure.Data
                     .HasConversion(TransactionId => TransactionId.Value,
                                 value => TransactionId.Create(value));
 
+                entity.Property(c => c.AccountId)
+                    .HasConversion(Id => Id.Value,
+                                value => AccountId.Create(value))
+                    .IsRequired();
+
+                entity.HasOne(t => t.RelatedAccount)
+     .WithMany()
+     .HasForeignKey("RelatedAccountId") // name of the DB column
+     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(t => t.RelatedAccountId)
+                    .HasConversion(
+                        id => id.Value,
+                        value => AccountId.Create(value))
+                    .HasColumnName("RelatedAccountId");
+
+
                 // Configure Money as owned type
                 entity.OwnsOne(t => t.Amount, money =>
                 {
@@ -111,6 +167,12 @@ namespace CoreBanking.Infrastructure.Data
                         .HasMaxLength(3);
                 });
 
+                entity.Property(t => t.RunningBalance)
+              .HasColumnType("decimal")
+                  .HasPrecision(18, 2)
+                  .IsRequired();
+
+
                 entity.Property(t => t.Type)
                     .HasConversion<string>()
                     .IsRequired();
@@ -119,6 +181,10 @@ namespace CoreBanking.Infrastructure.Data
                 entity.Property(t => t.Reference).HasMaxLength(50);
                 entity.Property(t => t.DateCreated).IsRequired();
             });
+
+            //Hold configuration
+
+
 
             // Global query filter in DbContext - Automatically Exclude Deleted Records
             modelBuilder.Entity<Customer>().HasQueryFilter(c => !c.IsDeleted);
@@ -134,31 +200,43 @@ namespace CoreBanking.Infrastructure.Data
             });
 
             // Seed the DB
-            modelBuilder.Entity<Customer>().HasData(new {
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    FirstName = "Alice",
-                    LastName = "Johnson",
-                    Email = "alice.johnson@email.com",
-                    PhoneNumber = "555-0101",
-                    BVN = "20000000009",
-                    CreditScore = 40,
-                    DateOfBirth = DateTime.UtcNow.AddYears(-30),
-                    DateCreated = DateTime.UtcNow.AddDays(-30),
-                    IsActive = true,
-                    IsDeleted = false
-                }
+            modelBuilder.Entity<Customer>().HasData(new
+            {
+                Id = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                FirstName = "Alice",
+                LastName = "Johnson",
+                Email = "alice.johnson@email.com",
+                BVN = "20000000009",
+                CreditScore = 40,
+                PhoneNumber = "555-0101",
+                Street = "123 Main St",
+                City = "Lagos",
+                State = "Lagos",
+                ZipCode = "100001",
+                Country = "NG",
+                DateOfBirth = new DateTime(1995, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateCreated = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateUpdated = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                IsActive = true,
+                IsDeleted = false
+            }
             );
 
-            modelBuilder.Entity<Account>().HasData(new {
-                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
-                    AccountNumber = AccountNumber.Create("1000000001"),
-                    AccountType = AccountType.Checking, // EF handles enum conversion
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    Currency = "NGN",
-                    DateOpened = DateTime.UtcNow.AddDays(-20),
-                    IsActive = true,
-                    IsDeleted = false            
-                }
+
+            modelBuilder.Entity<Account>().HasData(new
+            {
+                Id = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                AccountNumber = AccountNumber.Create("1000000001"),
+                AccountType = AccountType.Checking, // EF handles enum conversion
+                AccountStatus = AccountStatus.Active,
+                CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                Currency = "NGN",
+                DateOpened = DateTime.UtcNow.AddDays(-20),
+                DateCreated = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateUpdated = new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                IsActive = true,
+                IsDeleted = false
+            }
             );
 
             // Then configure the owned types separately

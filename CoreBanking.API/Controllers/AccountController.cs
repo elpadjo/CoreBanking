@@ -67,7 +67,7 @@ public class AccountsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<Guid>>> CreateAccount([FromBody] CreateAccountRequest request)
     {
-        _logger.LogInformation("Creating new account for customer {CustomerId}", CustomerId.Create(request.CustomerId) );
+        _logger.LogInformation("Creating new account for customer {CustomerId}", CustomerId.Create(request.CustomerId));
 
         var command = _mapper.Map<CreateAccountCommand>(request);
         var result = await _mediator.Send(command);

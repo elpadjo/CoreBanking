@@ -1,4 +1,5 @@
 ﻿namespace CoreBanking.Core.ValueObjects;
+
 public record ContactInfo
 {
     public string Email { get; }
@@ -20,6 +21,8 @@ public record ContactInfo
         PhoneNumber = phoneNumber.Trim();
         Address = address ?? throw new ArgumentNullException(nameof(address));
     }
+
+    private ContactInfo() { } // For EF Core
 
     public ContactInfo WithEmail(string newEmail)
     {
