@@ -3,6 +3,7 @@ using CoreBanking.API.gRPC.Services;
 using CoreBanking.API.Hubs;
 using CoreBanking.API.Hubs.EventHandlers;
 using CoreBanking.API.Hubs.Management;
+using CoreBanking.API.Mapping;
 using CoreBanking.API.Middleware;
 using CoreBanking.API.Services;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
@@ -117,6 +118,7 @@ namespace CoreBanking.API
             builder.Services.AddValidatorsFromAssembly(typeof(CreateAccountCommandValidator).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountProfile).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountGrpcProfile).Assembly);
+            builder.Services.AddAutoMapper(cfg => { }, typeof(RequestToCommandProfile).Assembly);
 
             // Outbox
             builder.Services.AddScoped<IOutboxMessageProcessor, OutboxMessageProcessor>();
@@ -133,6 +135,10 @@ namespace CoreBanking.API
                     Version = "v1",
                     Description = "A modern banking API built with Clean Architecture, DDD, and CQRS"
                 });
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
             });
 
             // Kestrel multi-protocol setup

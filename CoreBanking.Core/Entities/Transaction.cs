@@ -4,7 +4,9 @@ using CoreBanking.Core.ValueObjects;
 
 namespace CoreBanking.Core.Entities
 {
-    public class Transaction : Entity<TransactionId>, ISoftDelete
+    public class Transaction : Entity<TransactionId> 
+        //ISoftDelete
+
     {
         public TransactionId Id { get; private set; }
         public AccountId AccountId { get; private set; }
@@ -25,9 +27,9 @@ namespace CoreBanking.Core.Entities
         public string Reference { get; private set; }
 
         // ISoftDelete implementation
-        public bool IsDeleted { get; private set; }
-        public DateTime? DeletedAt { get; private set; }
-        public string? DeletedBy { get; private set; }
+        //public bool IsDeleted { get; private set; }
+        //public DateTime? DeletedAt { get; private set; }
+        //public string? DeletedBy { get; private set; }
 
         private Transaction() { } // For EF Core
 
@@ -123,30 +125,30 @@ namespace CoreBanking.Core.Entities
             DateUpdated = DateTime.UtcNow;
         }
 
-        public void SoftDelete(string deletedBy, string reason = "Correction")
-        {
-            if (IsDeleted)
-                throw new InvalidOperationException("Transaction is already deleted");
+        //public void SoftDelete(string deletedBy, string reason = "Correction")
+        //{
+        //    if (IsDeleted)
+        //        throw new InvalidOperationException("Transaction is already deleted");
 
-            IsDeleted = true;
-            DeletedAt = DateTime.UtcNow;
-            DeletedBy = deletedBy;
-            DateUpdated = DateTime.UtcNow;
+        //    IsDeleted = true;
+        //    DeletedAt = DateTime.UtcNow;
+        //    DeletedBy = deletedBy;
+        //    DateUpdated = DateTime.UtcNow;
 
-            // Could raise domain event here if needed
-            // AddDomainEvent(new TransactionDeletedEvent(Id, deletedBy, reason));
-        }
+        //    // Could raise domain event here if needed
+        //    // AddDomainEvent(new TransactionDeletedEvent(Id, deletedBy, reason));
+        //}
 
-        public void Restore()
-        {
-            if (!IsDeleted)
-                throw new InvalidOperationException("Transaction is not deleted");
+        //public void Restore()
+        //{
+        //    if (!IsDeleted)
+        //        throw new InvalidOperationException("Transaction is not deleted");
 
-            IsDeleted = false;
-            DeletedAt = null;
-            DeletedBy = null;
-            DateUpdated = DateTime.UtcNow;
-        }
+        //    IsDeleted = false;
+        //    DeletedAt = null;
+        //    DeletedBy = null;
+        //    DateUpdated = DateTime.UtcNow;
+        //}
 
         // Helper properties
         public bool IsTransfer => RelatedAccountId != null;
