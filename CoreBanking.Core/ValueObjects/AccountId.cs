@@ -1,6 +1,10 @@
 ﻿// CoreBanking.Core/ValueObjects/AccountId.cs
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace CoreBanking.Core.ValueObjects
 {
+
+    [NotMapped]
     public record AccountId
     {
         public Guid Value { get; init; }

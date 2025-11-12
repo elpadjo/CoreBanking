@@ -8,6 +8,9 @@
         public string ZipCode { get; }
         public string Country { get; }
 
+        // EF Core needs this
+        private Address() { }
+
         public Address(string street, string city, string state, string zipCode, string country = "US")
         {
             Street = street ?? throw new ArgumentNullException(nameof(street));

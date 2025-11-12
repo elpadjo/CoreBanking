@@ -1,11 +1,12 @@
 ﻿using CoreBanking.Core.Common;
-using CoreBanking.Core.ValueObjects;
 using CoreBanking.Core.Events;
+using CoreBanking.Core.ValueObjects;
 
 namespace CoreBanking.Core.Entities
 {
     public class Customer : AggregateRoot<CustomerId>, ISoftDelete
     {
+        public CustomerId CustomerId { get; private set; }
         public string FirstName { get; private set; }
         public string LastName { get; private set; }
         public string BVN { get; private set; }

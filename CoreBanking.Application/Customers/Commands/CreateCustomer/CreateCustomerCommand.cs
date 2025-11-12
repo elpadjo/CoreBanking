@@ -15,7 +15,7 @@ public record CreateCustomerCommand : ICommand<CustomerId>
     public string City { get; init; } = string.Empty;
     public string State { get; init; } = string.Empty;
     public string ZipCode { get; init; } = string.Empty;
-    public string Country { get; init; } = "US";
+    public string Country { get; init; } = "NG";
 
     public string BVN { get; init; } = string.Empty;
     public DateTime DateOfBirth { get; init; }

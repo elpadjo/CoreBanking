@@ -9,6 +9,8 @@
             Value = value;
         }
 
+        private HoldId() { }
+
         public static HoldId Create()
         {
             return new HoldId(Guid.NewGuid());

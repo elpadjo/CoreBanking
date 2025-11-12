@@ -10,6 +10,7 @@ using CoreBanking.Application.Accounts.EventHandlers;
 using CoreBanking.Application.Common.Behaviors;
 using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Application.Common.Mappings;
+using CoreBanking.Application.Customers.Queries.GetCustomers;
 using CoreBanking.Application.External.HttpClients;
 using CoreBanking.Application.External.Interfaces;
 using CoreBanking.Core.Events;
@@ -108,6 +109,7 @@ namespace CoreBanking.API
             builder.Services.AddMediatR(cfg =>
             {
                 cfg.RegisterServicesFromAssembly(typeof(CreateAccountCommand).Assembly);
+                cfg.RegisterServicesFromAssembly(typeof(GetCustomersQueryHandler).Assembly);
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
                 cfg.AddOpenBehavior(typeof(DomainEventsBehavior<,>));
@@ -116,6 +118,7 @@ namespace CoreBanking.API
             // Validation and mapping
             builder.Services.AddValidatorsFromAssembly(typeof(CreateAccountCommandValidator).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountProfile).Assembly);
+            builder.Services.AddAutoMapper(cfg => { }, typeof(CustomerProfile).Assembly);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AccountGrpcProfile).Assembly);
 
             // Outbox
@@ -133,6 +136,10 @@ namespace CoreBanking.API
                     Version = "v1",
                     Description = "A modern banking API built with Clean Architecture, DDD, and CQRS"
                 });
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
             });
 
             // Kestrel multi-protocol setup
@@ -168,6 +175,7 @@ namespace CoreBanking.API
 
                 app.MapGrpcReflectionService();
             }
+
 
             app.UseAuthorization();
 
