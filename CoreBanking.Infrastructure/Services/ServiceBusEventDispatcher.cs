@@ -1,6 +1,7 @@
 ﻿using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Core.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace CoreBanking.Infrastructure.Services
 {
@@ -8,6 +9,7 @@ namespace CoreBanking.Infrastructure.Services
     {
         private readonly IEventPublisher _eventPublisher;
         private readonly ILogger<ServiceBusEventDispatcher> _logger;
+        private readonly List<IDomainEvent> _publishedEvents = new();
 
         public ServiceBusEventDispatcher(IEventPublisher eventPublisher, ILogger<ServiceBusEventDispatcher> logger)
         {
@@ -20,6 +22,7 @@ namespace CoreBanking.Infrastructure.Services
             try
             {
                 await _eventPublisher.PublishAsync(domainEvent, cancellationToken);
+                _publishedEvents.Add(domainEvent);
 
                 _logger.LogInformation(
                     "Successfully dispatched domain event {EventType} with ID {EventId}",
@@ -32,22 +35,58 @@ namespace CoreBanking.Infrastructure.Services
                     "Failed to dispatch domain event {EventType} with ID {EventId}",
                     domainEvent.GetType().Name, domainEvent.EventId);
 
-                // In production, you might want to store failed events for retry
+                // Store failed events for later retry or analysis
+                await StoreFailedEventAsync(domainEvent, ex);
                 throw;
             }
         }
 
         public async Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
         {
-            var dispatchTasks = domainEvents.Select(domainEvent => DispatchAsync(domainEvent, cancellationToken));
-            await Task.WhenAll(dispatchTasks);
+            var eventsList = domainEvents.ToList();
 
-            _logger.LogInformation("Dispatched {EventCount} domain events", domainEvents.Count());
+            if (eventsList.Count > 10)
+            {
+                // Use batch publishing for large numbers of events
+                await _eventPublisher.PublishBatchAsync(eventsList, cancellationToken);
+            }
+            else
+            {
+                var dispatchTasks = eventsList.Select(domainEvent => DispatchAsync(domainEvent, cancellationToken));
+                await Task.WhenAll(dispatchTasks);
+            }
+
+            _logger.LogInformation("Dispatched {EventCount} domain events", eventsList.Count);
         }
 
-        public Task DispatchDomainEventsAsync(CancellationToken cancellationToken)
+        public async Task DispatchDomainEventsAsync(CancellationToken cancellationToken)
         {
+            // This method seems to be from your original interface - implement if needed
+            // If you don't need it, you can remove it from the interface
             throw new NotImplementedException();
+        }
+
+        public IReadOnlyList<IDomainEvent> GetPublishedEvents() => _publishedEvents.AsReadOnly();
+
+        public void ClearPublishedEvents() => _publishedEvents.Clear();
+
+        private async Task StoreFailedEventAsync(IDomainEvent domainEvent, Exception exception)
+        {
+            // In a real implementation, you might store this in a database for later analysis/retry
+            var failedEventInfo = new
+            {
+                EventId = domainEvent.EventId,
+                EventType = domainEvent.GetType().Name,
+                OccurredOn = domainEvent.OccurredOn,
+                Exception = exception.Message,
+                StackTrace = exception.StackTrace,
+                StoredAt = DateTime.UtcNow
+            };
+
+            _logger.LogError("Stored failed event: {FailedEventInfo}", JsonSerializer.Serialize(failedEventInfo));
+
+            // TODO: Implement persistent storage for failed events
+            await Task.CompletedTask;
         }
     }
 }

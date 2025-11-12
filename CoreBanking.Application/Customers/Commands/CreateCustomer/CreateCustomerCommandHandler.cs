@@ -4,6 +4,7 @@ using CoreBanking.Application.Common.Models;
 using CoreBanking.Application.External.DTOs;
 using CoreBanking.Application.External.Interfaces;
 using CoreBanking.Core.Entities;
+using CoreBanking.Core.Events;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.Models;
 using CoreBanking.Core.ValueObjects;
@@ -24,6 +25,7 @@ namespace CoreBanking.Application.Customers.Commands.CreateCustomer;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ISimulatedCreditScoringService _creditScoringService;
     private readonly IResilienceService _resilienceService;
+    private readonly IDomainEventDispatcher _domainEventDispatcher;
 
     public CreateCustomerCommandHandler(
         ICustomerRepository customerRepository,
@@ -33,7 +35,8 @@ namespace CoreBanking.Application.Customers.Commands.CreateCustomer;
         IResilientHttpClientService resilientClient,
         IHttpClientFactory httpClientFactory,
         ISimulatedCreditScoringService creditScoringService,
-        IResilienceService resilienceService)
+        IResilienceService resilienceService,
+        IDomainEventDispatcher domainEventDispatcher)
     {
         _customerRepository = customerRepository;
         _unitOfWork = unitOfWork;
@@ -43,6 +46,7 @@ namespace CoreBanking.Application.Customers.Commands.CreateCustomer;
         _httpClientFactory = httpClientFactory;
         _creditScoringService = creditScoringService;
         _resilienceService = resilienceService;
+        _domainEventDispatcher = domainEventDispatcher;
     }    
 
     public async Task<Result<CustomerId>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
@@ -110,7 +114,15 @@ namespace CoreBanking.Application.Customers.Commands.CreateCustomer;
                 customer.CustomerId, creditScore.Score);
 
             // Step 5: Publish customer created event
-            await PublishCustomerCreatedEvent(customer, creditScore);
+            var customerCreatedEvent = new CustomerCreatedEvent(
+            customer.CustomerId,
+            customer.FirstName,
+            customer.LastName,
+            customer.Email,
+            customer.PhoneNumber,
+            creditScore.Score);
+
+            await _domainEventDispatcher.DispatchAsync(customerCreatedEvent, cancellationToken);
 
             return Result<CustomerId>.Success(customer.CustomerId);
         }
@@ -203,13 +215,5 @@ namespace CoreBanking.Application.Customers.Commands.CreateCustomer;
             async (ct) => await _creditScoringService.GetCreditScoreAsync(bvn, ct),
             $"CreditScoreLookup-{bvn}",
             cancellationToken);
-    }
-
-    private async Task PublishCustomerCreatedEvent(Customer customer, SimulatedCreditScoreResponse creditScore)
-    {
-        // This will be implemented in Day 10 with Azure Service Bus
-        _logger.LogInformation(
-            "Would publish CustomerCreatedEvent for {CustomerId} with credit band {Band}",
-            customer.CustomerId, creditScore.Band);
     }
 }
