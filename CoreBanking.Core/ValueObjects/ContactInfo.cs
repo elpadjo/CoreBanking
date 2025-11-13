@@ -4,6 +4,7 @@ public record ContactInfo
     public string Email { get; }
     public string PhoneNumber { get; }
     public Address Address { get; }
+    private ContactInfo() { }
 
     public ContactInfo(string email, string phoneNumber, Address address)
     {

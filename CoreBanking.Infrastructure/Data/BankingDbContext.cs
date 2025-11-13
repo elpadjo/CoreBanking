@@ -30,6 +30,8 @@ namespace CoreBanking.Infrastructure.Data
 
             modelBuilder.Ignore<DomainEvent>();
             modelBuilder.Ignore<IDomainEvent>();
+            modelBuilder.Ignore<AccountId>();
+            modelBuilder.Ignore<ContactInfo>();
 
             // Customer configuration
             modelBuilder.Entity<Customer>(entity =>
@@ -68,16 +70,27 @@ namespace CoreBanking.Infrastructure.Data
                     .IsRequired();
 
                 // Configure Money as owned type (Value Object)
-                /*entity.OwnsOne(a => a.Balance, money =>
+                entity.OwnsOne(a => a.AvailableBalance, money =>
                 {
                     money.Property(m => m.Amount)
-                        .HasColumnName("Amount")
+                        .HasColumnName("AvailableAmount")
                         .HasPrecision(18, 2);
                     money.Property(m => m.Currency)
-                        .HasColumnName("Currency")
+                        .HasColumnName("AvailableCurrency")
                         .HasMaxLength(3)
                         .HasDefaultValue("NGN");
-                });*/
+                });
+
+                entity.OwnsOne(a => a.CurrentBalance, money =>
+                {
+                    money.Property(m => m.Amount)
+                        .HasColumnName("CurrentAmount")
+                        .HasPrecision(18, 2);
+                    money.Property(m => m.Currency)
+                        .HasColumnName("CurrentCurrency")
+                        .HasMaxLength(3)
+                        .HasDefaultValue("NGN");
+                });
 
                 entity.Property(a => a.AccountType)
                     .HasConversion<string>()
@@ -93,33 +106,130 @@ namespace CoreBanking.Infrastructure.Data
             });
 
             // Transaction configuration
+            //modelBuilder.Entity<Transaction>(entity =>
+            //{
+            //    entity.HasKey(t => t.Id);
+            //    entity.Property(c => c.Id)
+            //        .HasConversion(TransactionId => TransactionId.Value,
+            //                    value => TransactionId.Create(value));
+
+            //    // Configure Money as owned type
+            //    entity.OwnsOne(t => t.Amount, money =>
+            //    {
+            //        money.Property(m => m.Amount)
+            //            .HasColumnName("Amount")
+            //            .HasPrecision(18, 2);
+            //        money.Property(m => m.Currency)
+            //            .HasColumnName("Currency")
+            //            .HasMaxLength(3);
+            //    });
+
+            //    entity.Property(t => t.Type)
+            //        .HasConversion<string>()
+            //        .IsRequired();
+
+            //    entity.Property(t => t.Description).HasMaxLength(500);
+            //    entity.Property(t => t.Reference).HasMaxLength(50);
+            //    entity.Property(t => t.DateCreated).IsRequired();
+            //});
+
             modelBuilder.Entity<Transaction>(entity =>
             {
+                // Primary Key
                 entity.HasKey(t => t.Id);
-                entity.Property(c => c.Id)
-                    .HasConversion(TransactionId => TransactionId.Value,
-                                value => TransactionId.Create(value));
 
-                // Configure Money as owned type
+                // Transaction ID (Strongly-typed ID)
+                entity.Property(t => t.Id)
+                    .HasConversion(
+                        id => id.Value,
+                        value => TransactionId.Create(value))
+                    .IsRequired();
+
+                // Account ID (Strongly-typed ID - Foreign Key)
+                entity.Property(t => t.AccountId)
+                    .HasConversion(
+                        id => id.Value,
+                        value => AccountId.Create(value))
+                    .IsRequired();
+
+                // Related Account ID (Strongly-typed ID - Nullable Foreign Key)
+                //entity.Property(t => t.RelatedAccountId)
+                //    .HasConversion(
+                //        id => id.Value,
+                //        value => AccountId.Create(value));
+
+                entity.Property(t => t.RelatedAccountId)
+    .HasConversion<Guid?>(
+        id => id == null ? null : id.Value,
+        value => value.HasValue ? AccountId.Create(value.Value) : null);
+
+                // Money Value Object (Owned Type)
                 entity.OwnsOne(t => t.Amount, money =>
                 {
                     money.Property(m => m.Amount)
                         .HasColumnName("Amount")
-                        .HasPrecision(18, 2);
+                        .HasPrecision(18, 2)
+                        .IsRequired();
+
                     money.Property(m => m.Currency)
                         .HasColumnName("Currency")
-                        .HasMaxLength(3);
+                        .HasMaxLength(3)
+                        .IsRequired();
                 });
 
+                // Transaction Type Enum
                 entity.Property(t => t.Type)
                     .HasConversion<string>()
+                    .HasMaxLength(20)
                     .IsRequired();
 
-                entity.Property(t => t.Description).HasMaxLength(500);
-                entity.Property(t => t.Reference).HasMaxLength(50);
-                entity.Property(t => t.DateCreated).IsRequired();
-            });
+                // Running Balance
+                entity.Property(t => t.RunningBalance)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
 
+                // String Properties
+                entity.Property(t => t.Description)
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(t => t.Reference)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(t => t.TransactionReference)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                // Audit Properties
+                entity.Property(t => t.DateCreated)
+                    .IsRequired();
+
+                entity.Property(t => t.DateUpdated)
+                    .IsRequired();
+
+                // Soft Delete Properties (ISoftDelete)
+                //entity.Property(t => t.IsDeleted)
+                //    .IsRequired()
+                //    .HasDefaultValue(false);
+
+                //entity.Property(t => t.DeletedAt);
+
+                //entity.Property(t => t.DeletedBy)
+                //    .HasMaxLength(100);
+
+                // Navigation Properties
+                entity.HasOne(t => t.Account)
+                    .WithMany()
+                    .HasForeignKey(t => t.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+
+
+                // Query Filter for Soft Delete
+                //entity.HasQueryFilter(t => !t.IsDeleted);
+            });
             // Global query filter in DbContext - Automatically Exclude Deleted Records
             modelBuilder.Entity<Customer>().HasQueryFilter(c => !c.IsDeleted);
             modelBuilder.Entity<Account>().HasQueryFilter(a => !a.IsDeleted);
@@ -135,31 +245,110 @@ namespace CoreBanking.Infrastructure.Data
 
             // Seed the DB
             modelBuilder.Entity<Customer>().HasData(new {
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                    Id = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
                     FirstName = "Alice",
                     LastName = "Johnson",
                     Email = "alice.johnson@email.com",
                     PhoneNumber = "555-0101",
                     BVN = "20000000009",
                     CreditScore = 40,
-                    DateOfBirth = DateTime.UtcNow.AddYears(-30),
-                    DateCreated = DateTime.UtcNow.AddDays(-30),
-                    IsActive = true,
-                    IsDeleted = false
+                DateOfBirth = new DateTime(1995, 1, 15, 0, 0, 0, DateTimeKind.Utc), // Static date
+                DateCreated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc), // Static date
+                IsActive = true,
+                    IsDeleted = false,
+                    DateUpdated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc),
+            }
+            );
+
+            modelBuilder.Entity<Account>().HasData(new
+            {
+                Id = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                AccountNumber = AccountNumber.Create("1234567890"),
+                AccountType = AccountType.Checking, // EF handles enum conversion
+                CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                Currency = "NGN",
+                DateOpened = new DateTime(2025, 10, 11, 10, 0, 0, DateTimeKind.Utc),
+                IsActive = true,
+                IsDeleted = false,
+                AccountStatus = AccountStatus.Active,
+                DateCreated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc),
+                DateUpdated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc),
+            }
+            );
+
+            // Then configure the owned types separately
+            modelBuilder.Entity<Account>().OwnsOne(a => a.CurrentBalance).HasData(
+                new
+                {
+                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                    Amount = 10500.00m,
+                    Currency = "NGN"
+                }
+            );
+            modelBuilder.Entity<Account>().OwnsOne(a => a.AvailableBalance).HasData(
+                new
+                {
+                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                    Amount = 10000.00m,
+                    Currency = "NGN"
                 }
             );
 
-            modelBuilder.Entity<Account>().HasData(new {
-                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
-                    AccountNumber = AccountNumber.Create("1000000001"),
-                    AccountType = AccountType.Checking, // EF handles enum conversion
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    Currency = "NGN",
-                    DateOpened = DateTime.UtcNow.AddDays(-20),
-                    IsActive = true,
-                    IsDeleted = false            
+
+            modelBuilder.Entity<Transaction>().OwnsOne(t => t.Amount).HasData(
+                new
+                {
+                    TransactionId = TransactionId.Create(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+                    Amount = 1500.00m,
+                    Currency = "NGN"
                 }
             );
+            modelBuilder.Entity<Transaction>().OwnsOne(t => t.Amount).HasData(
+                new
+                {
+                    TransactionId =  TransactionId.Create(Guid.Parse("22222222-2222-2222-2222-222222222222")),
+                    Amount = 1500.00m,
+                    Currency = "NGN"
+                }
+            );
+
+
+            // Transaction 1: Initial Deposit for Alice
+            modelBuilder.Entity<Transaction>().HasData(new
+            {
+                Id = TransactionId.Create(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+                AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                RelatedAccountId = (AccountId?)null,
+                TransactionReference = "20241022120000-11111111",
+                Type = TransactionType.Deposit,
+                RunningBalance = 50000.00m,
+                Description = "Initial Deposit",
+                Reference = "DEP-001",
+                DateCreated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc), // Already static
+                DateUpdated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc), // Already static
+                //IsDeleted = false,
+                //DeletedAt = (DateTime?)null,
+                //DeletedBy = (string?)null
+            });
+
+            // Transaction 2: Withdrawal from Alice's account
+            modelBuilder.Entity<Transaction>().HasData(new
+            {
+                Id = TransactionId.Create(Guid.Parse("22222222-2222-2222-2222-222222222222")),
+                AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                RelatedAccountId = (AccountId?)null,
+                TransactionReference = "20241023100000-22222222",
+                Type = TransactionType.Withdrawal,
+                RunningBalance = 45000.00m,
+                Description = "ATM Withdrawal",
+                Reference = "WTH-001",
+                DateCreated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc), // Already static
+                DateUpdated = new DateTime(2025, 10, 1, 10, 0, 0, DateTimeKind.Utc), // Already static,
+                //IsDeleted = false,
+                //DeletedAt = (DateTime?)null,
+                //DeletedBy = (string?)null
+            });
+
 
             // Then configure the owned types separately
             /*modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(

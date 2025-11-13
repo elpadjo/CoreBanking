@@ -48,7 +48,7 @@ namespace CoreBanking.Core.Entities
                 throw new ArgumentException("Last name cannot be empty", nameof(lastName));
             LastName = lastName;
 
-            ContactInfo = contactInfo ?? throw new ArgumentNullException(nameof(contactInfo));
+            //ContactInfo = contactInfo ?? throw new ArgumentNullException(nameof(contactInfo));
 
             if (string.IsNullOrWhiteSpace(bVN))
                 throw new ArgumentException("BVN cannot be empty", nameof(bVN));
@@ -78,12 +78,12 @@ namespace CoreBanking.Core.Entities
             if (!IsActive)
                 throw new InvalidOperationException("Cannot update inactive customer");
 
-            var oldContactInfo = ContactInfo;
-            ContactInfo = newContactInfo;
+            //var oldContactInfo = ContactInfo;
+            //ContactInfo = newContactInfo;
             UpdateTimestamp();
 
             // Single event for profile changes
-            AddDomainEvent(new CustomerProfileUpdatedEvent(Id, oldContactInfo, newContactInfo));
+            //AddDomainEvent(new CustomerProfileUpdatedEvent(Id, oldContactInfo, newContactInfo));
         }
 
         public void UpdateCreditScore(int newCreditScore, string reason = "System update")
