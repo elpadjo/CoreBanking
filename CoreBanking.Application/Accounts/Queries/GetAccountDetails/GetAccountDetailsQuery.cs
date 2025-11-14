@@ -1,4 +1,5 @@
-﻿using CoreBanking.Application.Common.Interfaces;
+﻿using CoreBanking.Application.Accounts.DTOs;
+using CoreBanking.Application.Common.Interfaces;
 using CoreBanking.Core.ValueObjects;
 
 namespace CoreBanking.Application.Accounts.Queries.GetAccountDetails;

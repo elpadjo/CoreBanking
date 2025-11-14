@@ -1,11 +1,12 @@
 ﻿using AutoMapper;
 using CoreBanking.API.Models;
 using CoreBanking.API.Models.Requests;
+using CoreBanking.Application.Accounts.Commands.CloseMyAccount;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
-using CoreBanking.Application.Accounts.Commands.TransferMoney;
+using CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences;
 using CoreBanking.Application.Accounts.DTOs;
+using CoreBanking.Application.Accounts.Queries.GetAccountBalance;
 using CoreBanking.Application.Accounts.Queries.GetAccountDetails;
-using CoreBanking.Application.Accounts.Queries.GetTransactionHistory;
 using CoreBanking.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -83,83 +84,25 @@ public class AccountsController : ControllerBase
     }
 
     /// <summary>
-    /// Transfer money between accounts
-    /// </summary>
-    /// <param name="sourceAccountNumber">Source account number</param>
-    /// <param name="destinationAccountNumber">Destination account number</param>
-    /// <param name="request">Transfer details</param>
-    /// <returns>Transfer operation result</returns>
-    /// <response code="200">Transfer completed successfully</response>
-    /// <response code="400">Invalid transfer request</response>
-    /// <response code="404">One or both accounts not found</response>
-    /// <response code="409">Business rule violation (e.g., insufficient funds)</response>
-    [HttpPost("{sourceAccountNumber}/transfer/{destinationAccountNumber}")]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<ApiResponse>> TransferMoney(
-        string sourceAccountNumber,
-        string destinationAccountNumber,
-        [FromBody] TransferMoneyRequest request)
-    {
-        _logger.LogInformation("Processing transfer from {SourceAccount} to {DestinationAccount}",
-            sourceAccountNumber, destinationAccountNumber);
-
-        var command = new TransferMoneyCommand
-        {
-            SourceAccountNumber = AccountNumber.Create(sourceAccountNumber),
-            DestinationAccountNumber = AccountNumber.Create(destinationAccountNumber),
-            Amount = new Money(request.Amount, request.Currency),
-            Reference = request.Reference,
-            Description = request.Description
-        };
-
-        var result = await _mediator.Send(command);
-
-        if (!result.IsSuccess)
-        {
-            return result.Errors.Any(e => e.Contains("insufficient", StringComparison.OrdinalIgnoreCase) ||
-                                         e.Contains("limit reached", StringComparison.OrdinalIgnoreCase))
-                ? Conflict(ApiResponse.CreateFailure(result.Errors))
-                : BadRequest(ApiResponse.CreateFailure(result.Errors));
-        }
-
-        return Ok(ApiResponse.CreateSuccess("Transfer completed successfully"));
-    }
-
-    /// <summary>
-    /// Get transaction history for an account
+    /// Get account balance information
     /// </summary>
     /// <param name="accountNumber">The account number</param>
-    /// <param name="startDate">Start date for filtering transactions (optional)</param>
-    /// <param name="endDate">End date for filtering transactions (optional)</param>
-    /// <param name="page">Page number for pagination (default: 1)</param>
-    /// <param name="pageSize">Number of transactions per page (default: 50)</param>
-    /// <returns>Paginated transaction history</returns>
-    /// <response code="200">Returns transaction history</response>
-    /// <response code="404">Account not found</response>
-    /// <response code="400">Invalid account number format</response>
-    [HttpGet("{accountNumber}/transactions")]
-    [ProducesResponseType(typeof(ApiResponse<TransactionHistoryDto>), StatusCodes.Status200OK)]
+    /// <returns>Current and available balances</returns>
+    /// <response code="200">Returns account balance</response>
+    /// <response code="404">Account not found or access denied</response>
+    [HttpGet("{accountNumber}/balance")]
+    [ProducesResponseType(typeof(ApiResponse<AccountBalanceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ApiResponse<TransactionHistoryDto>>> GetTransactionHistory(
-        string accountNumber,
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+    public async Task<ActionResult<ApiResponse<AccountBalanceDto>>> GetAccountBalance(string accountNumber)
     {
-        _logger.LogInformation("Retrieving transaction history for {AccountNumber}", accountNumber);
+        //var customerId = GetCurrentCustomerId();
+        //_logger.LogInformation("Customer {CustomerId} checking balance for account {AccountNumber}",
+        _logger.LogInformation("Customer checking balance for account {AccountNumber}", accountNumber);
 
-        var query = new GetTransactionHistoryQuery
+        var query = new GetAccountBalanceQuery
         {
-            AccountNumber = AccountNumber.Create(accountNumber),
-            StartDate = startDate,
-            EndDate = endDate,
-            Page = page,
-            PageSize = pageSize
+            AccountNumber = AccountNumber.Create(accountNumber)
+            //CustomerId = customerId // For authorization
         };
 
         var result = await _mediator.Send(query);
@@ -167,6 +110,81 @@ public class AccountsController : ControllerBase
         if (!result.IsSuccess)
             return NotFound(ApiResponse.CreateFailure(result.Errors));
 
-        return Ok(ApiResponse<TransactionHistoryDto>.CreateSuccess(result.Data!));
+        return Ok(ApiResponse<AccountBalanceDto>.CreateSuccess(result.Data!));
     }
+
+    /// <summary>
+    /// Close customer's own account (requires zero balance)
+    /// </summary>
+    /// <param name="accountNumber">The account number to close</param>
+    /// <param name="request">Close account request with reason</param>
+    /// <returns>Operation result</returns>
+    /// <response code="200">Account closed successfully</response>
+    /// <response code="400">Cannot close account (e.g., non-zero balance)</response>
+    /// <response code="404">Account not found or access denied</response>
+    [HttpDelete("{accountNumber}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse>> CloseMyAccount(
+        string accountNumber,
+        [FromBody] CloseMyAccountRequest request)
+    {
+        //var customerId = GetCurrentCustomerId();
+        //_logger.LogInformation("Customer {CustomerId} requesting to close account {AccountNumber}",
+        _logger.LogInformation("Customer requesting to close account {AccountNumber}", accountNumber);
+
+        var command = new CloseMyAccountCommand
+        {
+            AccountNumber = AccountNumber.Create(accountNumber),
+            //CustomerId = customerId,
+            Reason = request.Reason
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse.CreateFailure(result.Errors));
+
+        return Ok(ApiResponse.CreateSuccess("Account closed successfully"));
+    }
+
+    /// <summary>
+    /// Update account preferences and settings
+    /// </summary>
+    /// <param name="accountNumber">The account number</param>
+    /// <param name="request">Account preferences to update</param>
+    /// <returns>Operation result</returns>
+    /// <response code="200">Preferences updated successfully</response>
+    /// <response code="404">Account not found or access denied</response>
+    [HttpPatch("{accountNumber}/preferences")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse>> UpdateAccountPreferences(
+        string accountNumber,
+        [FromBody] UpdateAccountPreferencesRequest request)
+    {
+        // var customerId = GetCurrentCustomerId();
+        // _logger.LogInformation("Customer {CustomerId} updating preferences for account {AccountNumber}",
+        _logger.LogInformation("Customer updating preferences for account {AccountNumber}", accountNumber);
+
+        var command = new UpdateAccountPreferencesCommand
+        {
+            AccountNumber = AccountNumber.Create(accountNumber),
+            //CustomerId = customerId,
+            EnableTransactionAlerts = request.EnableTransactionAlerts,
+            EnableLowBalanceAlerts = request.EnableLowBalanceAlerts,
+            LowBalanceThreshold = request.LowBalanceThreshold,
+            MonthlyStatementPreference = request.MonthlyStatementPreference
+        };
+
+        var result = await _mediator.Send(command);
+
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse.CreateFailure(result.Errors));
+
+        return Ok(ApiResponse.CreateSuccess("Account preferences updated successfully"));
+    }
+
+    
 }

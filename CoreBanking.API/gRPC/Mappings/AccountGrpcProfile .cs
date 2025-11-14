@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using CoreBanking.API.gRPC; // gRPC-generated types
-using CoreBanking.Application.Accounts.Queries.GetAccountDetails;
-using CoreBanking.Application.Accounts.Queries.GetTransactionHistory;
+using CoreBanking.Application.Accounts.DTOs;
 using Google.Protobuf.WellKnownTypes;
 
 namespace CoreBanking.API.gRPC.Mappings

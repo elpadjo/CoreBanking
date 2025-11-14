@@ -1,4 +1,5 @@
-﻿using CoreBanking.Application.Common.Models;
+﻿using CoreBanking.Application.Accounts.DTOs;
+using CoreBanking.Application.Common.Models;
 using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
 using CoreBanking.Core.Interfaces;

@@ -1,5 +1,5 @@
 ﻿using CoreBanking.Core.ValueObjects;
-namespace CoreBanking.Application.Accounts.Queries.GetTransactionHistory
+namespace CoreBanking.Application.Accounts.DTOs
 {
     public record TransactionDto
     {

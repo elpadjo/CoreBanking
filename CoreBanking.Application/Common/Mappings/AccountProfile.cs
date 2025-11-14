@@ -1,8 +1,7 @@
 ﻿using AutoMapper;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
-using CoreBanking.Application.Accounts.Queries.GetAccountDetails;
+using CoreBanking.Application.Accounts.DTOs;
 using CoreBanking.Application.Accounts.Queries.GetAccountSummary;
-using CoreBanking.Application.Accounts.Queries.GetTransactionHistory;
 using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
 using CoreBanking.Core.ValueObjects;

@@ -1,4 +1,5 @@
-﻿using CoreBanking.Application.Common.Models;
+﻿using CoreBanking.Application.Accounts.DTOs;
+using CoreBanking.Application.Common.Models;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.ValueObjects;
 using MediatR;

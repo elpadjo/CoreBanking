@@ -1,7 +1,7 @@
 ﻿using CoreBanking.Core.Enums;
 using CoreBanking.Core.ValueObjects;
 
-namespace CoreBanking.Application.Accounts.Queries.GetAccountDetails
+namespace CoreBanking.Application.Accounts.DTOs
 {
     public record AccountDetailsDto
     {
