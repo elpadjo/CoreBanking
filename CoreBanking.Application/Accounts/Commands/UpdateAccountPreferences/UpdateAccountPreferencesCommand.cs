@@ -1,4 +1,5 @@
 ﻿using CoreBanking.Application.Common.Models;
+using CoreBanking.Core.Enums;
 using CoreBanking.Core.ValueObjects;
 using MediatR;
 
@@ -10,7 +11,7 @@ namespace CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences
         //public CustomerId CustomerId { get; set; }
         public bool EnableTransactionAlerts { get; set; } = true;
         public bool EnableLowBalanceAlerts { get; set; } = true;
-        public decimal? LowBalanceThreshold { get; set; }
-        public string MonthlyStatementPreference { get; set; } = "Email"; // Email, Paper, Both, None
+        public Money? LowBalanceThreshold { get; set; }
+        public MonthlyStatementPreferenceType MonthlyStatementPreference { get; set; } = MonthlyStatementPreferenceType.Email;
     }
 }

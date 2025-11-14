@@ -18,7 +18,7 @@ namespace CoreBanking.Infrastructure.Data
         public DbSet<Customer> Customers => Set<Customer>();
         public DbSet<Account> Accounts => Set<Account>();
         public DbSet<Transaction> Transactions => Set<Transaction>();
-        public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!; // Uses this style to effect Outbox pattern
+        public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
         public DbSet<DomainEvent> DomainEvents { get; set; }
 
 
@@ -152,16 +152,21 @@ namespace CoreBanking.Infrastructure.Data
                     .IsFixedLength() // Account Number is always 10 digits
                     .IsRequired();
 
+                // Account-level currency
+                entity.Property(a => a.Currency)
+                    .HasMaxLength(3)
+                    .IsRequired()
+                    .HasDefaultValue("NGN");
+
                 // Configure CurrentBalance as owned type
                 entity.OwnsOne(a => a.CurrentBalance, money =>
                 {
                     money.Property(m => m.Amount)
                         .HasColumnName("CurrentBalance")
                         .HasPrecision(18, 2);
-                    money.Property(m => m.Currency)
-                        .HasColumnName("Currency")
-                        .HasMaxLength(3)
-                        .HasDefaultValue("NGN");
+
+                    // Tell EF to ignore Currency property during mapping (Shadow Mapping)
+                    money.Ignore(m => m.Currency);
                 });
 
                 // Configure AvailableBalance as owned type
@@ -170,14 +175,36 @@ namespace CoreBanking.Infrastructure.Data
                     money.Property(m => m.Amount)
                         .HasColumnName("AvailableBalance")
                         .HasPrecision(18, 2);
-                    money.Property(m => m.Currency)
-                        .HasColumnName("AvailableBalanceCurrency")
-                        .HasMaxLength(3)
-                        .HasDefaultValue("NGN");
+
+                    money.Ignore(m => m.Currency);
+                });
+
+                // Configure LowBalanceThreshold as owned type
+                entity.OwnsOne(a => a.LowBalanceThreshold, money =>
+                {
+                    money.Property(m => m.Amount)
+                        .HasColumnName("LowBalanceThreshold")
+                        .HasPrecision(18, 2);
+
+                    money.Ignore(m => m.Currency);
                 });
 
                 entity.Property(a => a.AccountType)
                     .HasConversion<string>()
+                    .IsRequired();
+
+                entity.Property(a => a.MonthlyStatementPreference)
+                    .HasConversion<string>()
+                    .HasMaxLength(10)
+                    .HasDefaultValue(MonthlyStatementPreferenceType.Email)
+                    .IsRequired(false);
+
+                entity.Property(a => a.EnableLowBalanceAlerts)
+                    .HasDefaultValue(true)
+                    .IsRequired();
+                
+                entity.Property(a => a.EnableTransactionAlerts)
+                    .HasDefaultValue(true)
                     .IsRequired();
 
                 // From AggregateRoot

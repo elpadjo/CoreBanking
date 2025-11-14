@@ -1,4 +1,6 @@
 ﻿using CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences;
+using CoreBanking.Core.Enums;
+using CoreBanking.Core.ValueObjects;
 using FluentValidation;
 
 namespace CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences
@@ -15,19 +17,19 @@ namespace CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences
             //RuleFor(x => x.CustomerId)
                 //.NotNull().WithMessage("Customer ID is required");
 
+            // Validate Money object
             RuleFor(x => x.LowBalanceThreshold)
-                .GreaterThan(0).WithMessage("Low balance threshold must be positive")
-                .When(x => x.LowBalanceThreshold.HasValue && x.EnableLowBalanceAlerts);
+                .Must(BeValidMoney).WithMessage("Low balance threshold must be a positive amount")
+                .When(x => x.LowBalanceThreshold != null && x.EnableLowBalanceAlerts);
 
+            // Enum validation - much simpler!
             RuleFor(x => x.MonthlyStatementPreference)
-                .NotEmpty().WithMessage("Statement preference is required")
-                .Must(BeAValidPreference).WithMessage("Statement preference must be 'Email', 'Paper', 'Both', or 'None'");
+                .IsInEnum().WithMessage("Invalid statement preference value");
         }
 
-        private bool BeAValidPreference(string preference)
+        private bool BeValidMoney(Money? money)
         {
-            var validPreferences = new[] { "Email", "Paper", "Both", "None" };
-            return validPreferences.Contains(preference);
+            return money == null || money.Amount > 0;
         }
     }
 }

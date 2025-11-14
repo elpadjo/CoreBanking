@@ -7,6 +7,7 @@ using CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences;
 using CoreBanking.Application.Accounts.DTOs;
 using CoreBanking.Application.Accounts.Queries.GetAccountBalance;
 using CoreBanking.Application.Accounts.Queries.GetAccountDetails;
+using CoreBanking.Core.Entities;
 using CoreBanking.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -174,8 +175,10 @@ public class AccountsController : ControllerBase
             //CustomerId = customerId,
             EnableTransactionAlerts = request.EnableTransactionAlerts,
             EnableLowBalanceAlerts = request.EnableLowBalanceAlerts,
-            LowBalanceThreshold = request.LowBalanceThreshold,
-            MonthlyStatementPreference = request.MonthlyStatementPreference
+            LowBalanceThreshold = request.LowBalanceThresholdAmount.HasValue
+        ? new Money(request.LowBalanceThresholdAmount.Value, request.LowBalanceThresholdCurrency ?? "NGN")
+        : null,
+            MonthlyStatementPreference = request.MonthlyStatementPreference // Direct assignment
         };
 
         var result = await _mediator.Send(command);

@@ -9,6 +9,7 @@ namespace CoreBanking.Core.Entities
     {
         public AccountNumber AccountNumber { get; private set; }
         public AccountType AccountType { get; private set; }
+        public string Currency { get; private set; }
         // Use CurrentBalance when checking if money actually exists
         public Money CurrentBalance { get; private set; }
         // Use AvailableBalance when checking if money can be spent/withdrawn
@@ -23,6 +24,12 @@ namespace CoreBanking.Core.Entities
         public DateTime? DeletedAt { get; private set; }
         public string? DeletedBy { get; private set; }
 
+        // Preference properties
+        public bool EnableTransactionAlerts { get; private set; } = true;
+        public bool EnableLowBalanceAlerts { get; private set; } = true;
+        public Money? LowBalanceThreshold { get; private set; }
+        public MonthlyStatementPreferenceType? MonthlyStatementPreference { get; private set; } = MonthlyStatementPreferenceType.Email;
+
         // Navigation properties
         private readonly List<Transaction> _transactions = new();
         public IReadOnlyCollection<Transaction> Transactions => _transactions.AsReadOnly();
@@ -34,6 +41,7 @@ namespace CoreBanking.Core.Entities
             Id = AccountId.Create();
             AccountNumber = accountNumber;
             AccountType = accountType;
+            Currency = initialBalance.Currency;
             CustomerId = customerId;
             CurrentBalance = initialBalance;
             AvailableBalance = initialBalance;
