@@ -3,6 +3,7 @@ using CoreBanking.API.Models;
 using CoreBanking.API.Models.Requests;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
 using CoreBanking.Application.Accounts.Commands.TransferMoney;
+using CoreBanking.Application.Accounts.DTOs;
 using CoreBanking.Application.Accounts.Queries.GetAccountDetails;
 using CoreBanking.Application.Accounts.Queries.GetTransactionHistory;
 using CoreBanking.Core.ValueObjects;
@@ -67,7 +68,7 @@ public class AccountsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<Guid>>> CreateAccount([FromBody] CreateAccountRequest request)
     {
-        _logger.LogInformation("Creating new account for customer {CustomerId}", CustomerId.Create(request.CustomerId) );
+        _logger.LogInformation("Creating new account for customer {CustomerId}", request.CustomerId);
 
         var command = _mapper.Map<CreateAccountCommand>(request);
         var result = await _mediator.Send(command);
@@ -77,34 +78,38 @@ public class AccountsController : ControllerBase
 
         return CreatedAtAction(
             nameof(GetAccountDetails),
-            new { accountNumber = "TEMPORARY" }, // Would need account number here
-            ApiResponse<Guid>.CreateSuccess(result.Data!));
+            new { accountNumber = result.Data.AccountNumber },
+            ApiResponse<CreateAccountResponse>.CreateSuccess(result.Data!));
     }
 
     /// <summary>
     /// Transfer money between accounts
     /// </summary>
-    /// <param name="sourceaccountNumber">Source account number</param>
-    /// <param name="destinationaccountNumber">Destination account number</param>
+    /// <param name="sourceAccountNumber">Source account number</param>
+    /// <param name="destinationAccountNumber">Destination account number</param>
     /// <param name="request">Transfer details</param>
     /// <returns>Transfer operation result</returns>
     /// <response code="200">Transfer completed successfully</response>
     /// <response code="400">Invalid transfer request</response>
+    /// <response code="404">One or both accounts not found</response>
     /// <response code="409">Business rule violation (e.g., insufficient funds)</response>
-    [HttpPost("{accountNumber}/transfer")]
+    [HttpPost("{sourceAccountNumber}/transfer/{destinationAccountNumber}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse>> TransferMoney(
-        string sourceaccountNumber, string destinationaccountNumber,
+        string sourceAccountNumber,
+        string destinationAccountNumber,
         [FromBody] TransferMoneyRequest request)
     {
-        _logger.LogInformation("Processing transfer from {AccountNumber}", sourceaccountNumber);
+        _logger.LogInformation("Processing transfer from {SourceAccount} to {DestinationAccount}",
+            sourceAccountNumber, destinationAccountNumber);
 
         var command = new TransferMoneyCommand
         {
-            SourceAccountNumber = AccountNumber.Create(sourceaccountNumber),
-            DestinationAccountNumber = AccountNumber.Create(destinationaccountNumber),
+            SourceAccountNumber = AccountNumber.Create(sourceAccountNumber),
+            DestinationAccountNumber = AccountNumber.Create(destinationAccountNumber),
             Amount = new Money(request.Amount, request.Currency),
             Reference = request.Reference,
             Description = request.Description
@@ -114,7 +119,8 @@ public class AccountsController : ControllerBase
 
         if (!result.IsSuccess)
         {
-            return result.Errors.Any(e => e.Contains("insufficient", StringComparison.OrdinalIgnoreCase))
+            return result.Errors.Any(e => e.Contains("insufficient", StringComparison.OrdinalIgnoreCase) ||
+                                         e.Contains("limit reached", StringComparison.OrdinalIgnoreCase))
                 ? Conflict(ApiResponse.CreateFailure(result.Errors))
                 : BadRequest(ApiResponse.CreateFailure(result.Errors));
         }
@@ -122,9 +128,22 @@ public class AccountsController : ControllerBase
         return Ok(ApiResponse.CreateSuccess("Transfer completed successfully"));
     }
 
+    /// <summary>
+    /// Get transaction history for an account
+    /// </summary>
+    /// <param name="accountNumber">The account number</param>
+    /// <param name="startDate">Start date for filtering transactions (optional)</param>
+    /// <param name="endDate">End date for filtering transactions (optional)</param>
+    /// <param name="page">Page number for pagination (default: 1)</param>
+    /// <param name="pageSize">Number of transactions per page (default: 50)</param>
+    /// <returns>Paginated transaction history</returns>
+    /// <response code="200">Returns transaction history</response>
+    /// <response code="404">Account not found</response>
+    /// <response code="400">Invalid account number format</response>
     [HttpGet("{accountNumber}/transactions")]
     [ProducesResponseType(typeof(ApiResponse<TransactionHistoryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<TransactionHistoryDto>>> GetTransactionHistory(
         string accountNumber,
         [FromQuery] DateTime? startDate = null,
@@ -132,6 +151,8 @@ public class AccountsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
+        _logger.LogInformation("Retrieving transaction history for {AccountNumber}", accountNumber);
+
         var query = new GetTransactionHistoryQuery
         {
             AccountNumber = AccountNumber.Create(accountNumber),

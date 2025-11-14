@@ -12,6 +12,7 @@ namespace CoreBanking.Core.Interfaces
         Task AddAsync(Account account);
         void Update(Account account);
         Task<bool> AccountNumberExistsAsync(AccountNumber accountNumber);
+        Task<AccountNumber> GenerateAccountNumberAsync();
         Task SaveChangesAsync();
     }
 }

@@ -65,6 +65,14 @@ namespace CoreBanking.Infrastructure.Repositories
                 .AnyAsync(a => a.AccountNumber == accountNumber);
         }
 
+        public async Task<AccountNumber> GenerateAccountNumberAsync()
+        {
+            var nextVal = await _context.Database.SqlQueryRaw<long>(
+                "SELECT NEXT VALUE FOR dbo.AccountNumberSeq").FirstAsync();
+
+            return AccountNumber.Create(nextVal.ToString("D10"));
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
