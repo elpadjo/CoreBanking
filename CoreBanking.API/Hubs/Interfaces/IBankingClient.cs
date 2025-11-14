@@ -1,0 +1,20 @@
+﻿using CoreBanking.API.Hubs.Models;
+using System.Data;
+
+namespace CoreBanking.API.Hubs.Interfaces;
+
+public interface IBankingClient
+{
+    // Transaction notifications
+    Task ReceiveTransactionNotification(TransactionNotification notification);
+    Task ReceiveBalanceUpdate(BalanceUpdate update);
+
+    // System alerts
+    Task ReceiveSystemAlert(SystemAlert alert);
+
+    // Fraud detection
+    Task ReceiveFraudAlert(FraudAlert alert);
+
+    // Connection management
+    Task ConnectionStateChanged(Models.ConnectionState state);
+}

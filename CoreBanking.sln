@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36616.10 d17.14
+VisualStudioVersion = 17.14.36616.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreBanking.API", "CoreBanking.API\CoreBanking.API.csproj", "{8A0000A4-93BE-461B-9C71-7D2CBFCA3045}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreBanking.Core", "CoreBanking.Core\CoreBanking.Core.csproj", "{24199794-2869-4358-960B-FDD212E56AB5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreBanking.Application", "CoreBanking.Application\CoreBanking.Application.csproj", "{33050E34-0F64-48B1-85C9-77A24AA4FA64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreBanking.GrpcClient", "CoreBanking.GrpcClient\CoreBanking.GrpcClient.csproj", "{7E489548-02E5-4E96-BC1D-A8BB8E48BF84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{33050E34-0F64-48B1-85C9-77A24AA4FA64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{33050E34-0F64-48B1-85C9-77A24AA4FA64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{33050E34-0F64-48B1-85C9-77A24AA4FA64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E489548-02E5-4E96-BC1D-A8BB8E48BF84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E489548-02E5-4E96-BC1D-A8BB8E48BF84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E489548-02E5-4E96-BC1D-A8BB8E48BF84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E489548-02E5-4E96-BC1D-A8BB8E48BF84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
