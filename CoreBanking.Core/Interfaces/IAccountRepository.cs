@@ -8,9 +8,10 @@ namespace CoreBanking.Core.Interfaces
         Task<Account?> GetByIdAsync(AccountId accountId);
         Task<List<Account>> GetAllAsync();
         Task<Account?> GetByAccountNumberAsync(AccountNumber accountNumber);
-        Task<IEnumerable<Account>> GetByCustomerIdAsync(CustomerId customerId);
+        Task<List<Account>> GetByCustomerIdAsync(CustomerId customerId);
         Task AddAsync(Account account);
-        Task UpdateAsync(Account account);
+        void Update(Account account);
         Task<bool> AccountNumberExistsAsync(AccountNumber accountNumber);
+        Task SaveChangesAsync();
     }
 }

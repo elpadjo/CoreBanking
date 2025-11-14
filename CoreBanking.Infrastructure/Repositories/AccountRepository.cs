@@ -1,5 +1,4 @@
 ﻿using CoreBanking.Core.Entities;
-using CoreBanking.Core.Exceptions;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.ValueObjects;
 using CoreBanking.Infrastructure.Data;
@@ -20,7 +19,7 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task<Account?> GetByIdAsync(AccountId accountId)
         {
             return await _context.Accounts
-                .Include(a => a.Customer) // ← Eager load Customer
+                .Include(a => a.Customer)
                 .Include(a => a.Transactions)
                 .FirstOrDefaultAsync(a => a.Id == accountId);
         }
@@ -28,7 +27,7 @@ namespace CoreBanking.Infrastructure.Repositories
         public async Task<List<Account>> GetAllAsync()
         {
             return await _context.Accounts
-                .Include(a => a.Customer) 
+                .Include(a => a.Customer)
                 .Include(a => a.Transactions)
                 .ToListAsync();
         }
@@ -41,11 +40,11 @@ namespace CoreBanking.Infrastructure.Repositories
                 .FirstOrDefaultAsync(a => a.AccountNumber == accountNumber);
         }
 
-        public async Task<IEnumerable<Account>> GetByCustomerIdAsync(CustomerId customerId)
+        public async Task<List<Account>> GetByCustomerIdAsync(CustomerId customerId)
         {
             return await _context.Accounts
                 .Where(a => a.CustomerId == customerId)
-                .Include(a => a.Customer) 
+                .Include(a => a.Customer)
                 .Include(a => a.Transactions)
                 .ToListAsync();
         }
@@ -55,31 +54,9 @@ namespace CoreBanking.Infrastructure.Repositories
             await _context.Accounts.AddAsync(account);
         }
 
-        public async Task UpdateAsync(Account account)
+        public void Update(Account account)
         {
             _context.Accounts.Update(account);
-            await Task.CompletedTask;
-        }
-
-        public async Task UpdateAccountBalanceAsync(AccountId accountId, Money newBalance)
-        {
-            var account = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.Id == accountId);
-
-            if (account == null)
-                throw new InvalidOperationException("Account not found.");
-
-            // Replace the value object
-            //account.UpdateBalance(newBalance);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                throw new ConcurrencyException("Account was modified by another user. Please refresh and try again.");
-            }
         }
 
         public async Task<bool> AccountNumberExistsAsync(AccountNumber accountNumber)
