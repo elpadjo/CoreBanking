@@ -10,5 +10,6 @@ namespace CoreBanking.Core.Interfaces
         Task AddAsync(Customer customer, CancellationToken cancellationToken = default); 
         Task UpdateAsync(Customer customer, CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(CustomerId customerId, CancellationToken cancellationToken = default);
+        Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

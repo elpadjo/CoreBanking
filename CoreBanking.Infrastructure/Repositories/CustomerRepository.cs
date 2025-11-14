@@ -45,5 +45,10 @@ namespace CoreBanking.Infrastructure.Repositories
             return await _context.Customers
                 .AnyAsync(c => c.CustomerId == customerId, cancellationToken);
         }
+
+        public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

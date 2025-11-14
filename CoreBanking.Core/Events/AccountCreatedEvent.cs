@@ -1,6 +1,5 @@
 ﻿// CoreBanking.Core/Events/AccountCreatedEvent.cs
 using CoreBanking.Core.Common;
-using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
 using CoreBanking.Core.ValueObjects;
 
