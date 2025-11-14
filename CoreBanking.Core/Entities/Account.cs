@@ -14,7 +14,7 @@ namespace CoreBanking.Core.Entities
         // Use AvailableBalance when checking if money can be spent/withdrawn
         public Money AvailableBalance { get; private set; }
         public CustomerId CustomerId { get; private set; }
-        public Customer Customer { get; private set; }
+        public Customer Customer { get; private set; } //Navigation ppt for customer
         public DateTime DateOpened { get; private set; }
         public DateTime? DateClosed { get; private set; }
         public byte[] RowVersion { get; private set; } = Array.Empty<byte>();

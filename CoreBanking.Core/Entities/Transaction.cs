@@ -6,7 +6,6 @@ namespace CoreBanking.Core.Entities
 {
     public class Transaction : Entity<TransactionId>, ISoftDelete
     {
-        public TransactionId Id { get; private set; }
         public AccountId AccountId { get; private set; }
 
         // For transfers - links the two related transactions

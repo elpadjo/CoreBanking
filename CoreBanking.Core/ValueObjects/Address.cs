@@ -2,11 +2,14 @@
 {
     public record Address
     {
-        public string Street { get; }
-        public string City { get; }
-        public string State { get; }
-        public string ZipCode { get; }
-        public string Country { get; }
+        public string Street { get; init; }
+        public string City { get; init; }
+        public string State { get; init; }
+        public string ZipCode { get; init; }
+        public string Country { get; init; }
+
+        // EF Core needs this
+        private Address() { }
 
         public Address(string street, string city, string state, string zipCode, string country = "US")
         {
