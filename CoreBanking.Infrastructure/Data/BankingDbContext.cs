@@ -67,21 +67,53 @@ namespace CoreBanking.Infrastructure.Data
                     .HasMaxLength(10)
                     .IsRequired();
 
-                // Configure Money as owned type (Value Object)
-                /*entity.OwnsOne(a => a.Balance, money =>
+                // Configure CurrentBalance as owned type
+                entity.OwnsOne(a => a.CurrentBalance, money =>
                 {
                     money.Property(m => m.Amount)
-                        .HasColumnName("Amount")
+                        .HasColumnName("CurrentBalance")
                         .HasPrecision(18, 2);
                     money.Property(m => m.Currency)
                         .HasColumnName("Currency")
                         .HasMaxLength(3)
                         .HasDefaultValue("NGN");
-                });*/
+                });
+
+                // Configure AvailableBalance as owned type
+                entity.OwnsOne(a => a.AvailableBalance, money =>
+                {
+                    money.Property(m => m.Amount)
+                        .HasColumnName("AvailableBalance")
+                        .HasPrecision(18, 2);
+                    money.Property(m => m.Currency)
+                        .HasColumnName("AvailableBalanceCurrency")
+                        .HasMaxLength(3)
+                        .HasDefaultValue("NGN");
+                });
 
                 entity.Property(a => a.AccountType)
                     .HasConversion<string>()
                     .IsRequired();
+
+                // From AggregateRoot
+                entity.Property(a => a.DateCreated).IsRequired();
+                entity.Property(a => a.DateUpdated).IsRequired();
+
+                // Account-specific properties
+                entity.Property(a => a.DateOpened).IsRequired();
+                entity.Property(a => a.DateClosed).IsRequired(false);
+                entity.Property(a => a.AccountStatus)
+                    .HasConversion<string>()
+                    .IsRequired();
+                entity.Property(a => a.IsDeleted).IsRequired();
+                entity.Property(a => a.DeletedAt).IsRequired(false);
+                entity.Property(a => a.DeletedBy).HasMaxLength(255).IsRequired(false);
+                entity.Property(a => a.RowVersion).IsRowVersion().IsConcurrencyToken();
+
+                // Customer relationship
+                entity.HasOne(a => a.Customer)
+                    .WithMany(c => c.Accounts)
+                    .HasForeignKey(a => a.CustomerId);
 
                 // Account has many Transactions
                 entity.HasMany(a => a.Transactions)
@@ -148,18 +180,19 @@ namespace CoreBanking.Infrastructure.Data
                     IsDeleted = false
                 }
             );
-
-            modelBuilder.Entity<Account>().HasData(new {
-                    AccountId = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
-                    AccountNumber = AccountNumber.Create("1000000001"),
-                    AccountType = AccountType.Checking, // EF handles enum conversion
-                    CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
-                    Currency = "NGN",
-                    DateOpened = DateTime.UtcNow.AddDays(-20),
-                    IsActive = true,
-                    IsDeleted = false            
-                }
-            );
+            
+            modelBuilder.Entity<Account>().HasData(new
+            {
+                Id = AccountId.Create(Guid.Parse("c3d4e5f6-3456-7890-cde1-345678901cde")),
+                AccountNumber = AccountNumber.Create("1000000001"),
+                AccountType = AccountType.Checking,
+                CustomerId = CustomerId.Create(Guid.Parse("a1b2c3d4-1234-5678-9abc-123456789abc")),
+                DateOpened = DateTime.UtcNow.AddDays(-20),
+                DateCreated = DateTime.UtcNow.AddDays(-20), // From AggregateRoot
+                DateUpdated = DateTime.UtcNow.AddDays(-20), // From AggregateRoot
+                AccountStatus = AccountStatus.Active,
+                IsDeleted = false
+            });
 
             // Then configure the owned types separately
             /*modelBuilder.Entity<Account>().OwnsOne(a => a.Balance).HasData(
