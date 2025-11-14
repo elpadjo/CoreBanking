@@ -22,6 +22,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
@@ -164,6 +165,7 @@ namespace CoreBanking.API
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "CoreBanking API v1");
                     c.RoutePrefix = "swagger";
+                    c.InjectStylesheet("/swagger-custom.css");
                 });
 
                 app.MapGrpcReflectionService();

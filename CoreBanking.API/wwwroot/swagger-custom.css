@@ -1,0 +1,28 @@
+﻿/* Hide schemas section */
+.swagger-ui .models {
+    display: none !important;
+}
+
+/* Hide the "Schemas" header */
+.swagger-ui .scheme-container {
+    display: none !important;
+}
+
+/* Optional: Make the UI more compact */
+.swagger-ui .opblock-tag {
+    font-size: 16px;
+    margin: 10px 0;
+}
+
+/* Hide CoreBanking.API default section and its GET / endpoint */
+.opblock-tag[data-tag="CoreBanking.API"],
+.opblock-tag[data-tag="CoreBanking.API"] + .no-margin {
+    display: none !important;
+}
+
+/* Alternative selectors for better browser support */
+#operations-tag-CoreBanking\\.API,
+#operations-tag-CoreBanking\\.API + .no-margin,
+#operations-CoreBanking\\.API-get_ {
+    display: none !important;
+}
