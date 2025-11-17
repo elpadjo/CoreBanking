@@ -1,8 +1,6 @@
-﻿using CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences;
-using CoreBanking.Application.Common.Models;
+﻿using CoreBanking.Application.Common.Models;
 using CoreBanking.Core.Entities;
 using CoreBanking.Core.Interfaces;
-using CoreBanking.Core.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 

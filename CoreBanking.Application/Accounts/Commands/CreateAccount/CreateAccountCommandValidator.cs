@@ -1,6 +1,7 @@
 ﻿using CoreBanking.Application.Accounts.Commands.CreateAccount;
 using CoreBanking.Core.Enums;
 using FluentValidation;
+using Microsoft.VisualBasic;
 
 public class CreateAccountCommandValidator : AbstractValidator<CreateAccountCommand>
 {
@@ -12,7 +13,7 @@ public class CreateAccountCommandValidator : AbstractValidator<CreateAccountComm
 
         RuleFor(x => x.AccountType)
             .NotEmpty().WithMessage("Account type is required")
-            .Must(BeValidAccountType).WithMessage("Invalid account type. Must be Savings or Current");
+            .Must(BeValidAccountType).WithMessage("Invalid account type. Must be Savings, Checking, Business or FixedDeposit");
 
         RuleFor(x => x.InitialDeposit)
             .GreaterThanOrEqualTo(0).WithMessage("Initial deposit cannot be negative")

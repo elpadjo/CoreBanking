@@ -39,15 +39,15 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
 
         try
         {
-            // Generate guaranteed unique account number from sequence
-            var accountNumber = await _accountRepository.GenerateAccountNumberAsync();
-
             // Parse account type
             if (!Enum.TryParse<AccountType>(request.AccountType, out var accountType))
                 return Result<CreateAccountResponse>.Failure("Invalid account type");
-
+            
+            // Generate guaranteed unique account number from sequence
+            var accountNumber = await _accountRepository.GenerateAccountNumberAsync();
+            
             // Create account with initial deposit
-            var account = Account.Create(
+            var account = new Account(
                 customerId: request.CustomerId,
                 accountNumber: accountNumber,
                 accountType: accountType,

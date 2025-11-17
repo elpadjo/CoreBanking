@@ -36,32 +36,22 @@ namespace CoreBanking.Core.Entities
 
         private Account() { } // EF Core needs this
 
-        private Account(AccountNumber accountNumber, AccountType accountType, CustomerId customerId, Money initialBalance)
+        public Account(AccountNumber accountNumber, AccountType accountType, CustomerId customerId, Money initialBalance)
         {
             Id = AccountId.Create();
             AccountNumber = accountNumber;
             AccountType = accountType;
             Currency = initialBalance.Currency;
             CustomerId = customerId;
-            CurrentBalance = initialBalance;
+            CurrentBalance = new Money(initialBalance.Amount, "NGN");
             AvailableBalance = initialBalance;
             DateOpened = DateTime.UtcNow;
             AccountStatus = AccountStatus.Active;
             DateCreated = DateTime.UtcNow;
             UpdateTimestamp();
 
+            // simply adds domain event to queue, does not raise it yet until we call saveChangesAsync
             AddDomainEvent(new AccountCreatedEvent(Id, accountNumber, customerId, accountType, initialBalance));
-        }
-
-        public static Account Create(CustomerId customerId, AccountNumber accountNumber, AccountType accountType, Money initialBalance)
-        {
-            if (initialBalance.Amount < 0)
-                throw new InvalidOperationException("Initial balance cannot be negative");
-
-            if (initialBalance.Amount > 1000000)
-                throw new InvalidOperationException("Initial deposit too large");
-
-            return new Account(accountNumber, accountType, customerId, initialBalance);
         }
 
         public Transaction Deposit(Money amount, string description = "Deposit")

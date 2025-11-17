@@ -1,6 +1,5 @@
 ﻿using CoreBanking.Application.Accounts.DTOs;
 using CoreBanking.Application.Common.Models;
-using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.ValueObjects;
@@ -32,6 +31,10 @@ namespace CoreBanking.Application.Accounts.Queries.GetAccountDetails
                 AvailableBalance = account.AvailableBalance.Amount,
                 DateOpened = account.DateOpened,
                 AccountStatus = account.AccountStatus,
+                EnableTransactionAlerts = account.EnableTransactionAlerts,
+                EnableLowBalanceAlerts = account.EnableLowBalanceAlerts,
+                LowBalanceThreshold = account.LowBalanceThreshold,
+                MonthlyStatementPreference = account.MonthlyStatementPreference,
                 CustomerId = account.CustomerId.ToString(),
                 CustomerName = $"{account.Customer.FirstName} {account.Customer.LastName}"
             };

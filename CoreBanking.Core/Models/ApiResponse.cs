@@ -1,4 +1,4 @@
-﻿namespace CoreBanking.API.Models;
+﻿namespace CoreBanking.Core.Models;
 
 public record ApiResponse
 {

@@ -3,17 +3,22 @@ using CoreBanking.Core.Entities;
 using CoreBanking.Core.Enums;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Core.ValueObjects;
+using CoreBanking.Infrastructure.Interceptors;
 using CoreBanking.Infrastructure.Persistence.Configurations;
 using CoreBanking.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace CoreBanking.Infrastructure.Data
 {
     public class BankingDbContext : DbContext
     {
-        public BankingDbContext(DbContextOptions<BankingDbContext> options)
-            : base(options) { }
+        private readonly OutboxInterceptor _outboxInterceptor;
+        
+        public BankingDbContext(DbContextOptions<BankingDbContext> options, OutboxInterceptor outboxInterceptor)
+            : base(options)
+        {
+            _outboxInterceptor = outboxInterceptor;
+        }
 
         public DbSet<Customer> Customers => Set<Customer>();
         public DbSet<Account> Accounts => Set<Account>();
@@ -120,7 +125,7 @@ namespace CoreBanking.Infrastructure.Data
                         address.Property(c => c.Country)
                             .HasColumnName("Country")
                             .HasMaxLength(50)
-                            .HasDefaultValue("US")
+                            .HasDefaultValue("NGN")
                             .IsRequired();
                     });
                 });
@@ -382,36 +387,5 @@ namespace CoreBanking.Infrastructure.Data
                 }
             );
         }
-
-        public async Task SaveChangesWithOutboxAsync(CancellationToken cancellationToken = default)
-        {
-            // Convert domain events to outbox messages
-            var events = ChangeTracker.Entries<AggregateRoot<AccountId>>()
-                .SelectMany(x => x.Entity.DomainEvents)
-                .Select(domainEvent => new OutboxMessage
-                {
-                    Id = Guid.NewGuid(),
-                    Type = domainEvent.GetType().Name,
-                    Content = JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
-                    OccurredOn = domainEvent.OccurredOn
-                })
-                .ToList();
-
-            // Clear domain events from aggregates
-            ChangeTracker.Entries<AggregateRoot<AccountId>>()
-                .ToList()
-                .ForEach(entry => entry.Entity.ClearDomainEvents());
-
-            // Save changes (including outbox messages) in single transaction
-            await base.SaveChangesAsync(cancellationToken);
-
-            // Add outbox messages after saving to ensure they're included in transaction
-            if (events.Any())
-            {
-                await OutboxMessages.AddRangeAsync(events, cancellationToken);
-                await base.SaveChangesAsync(cancellationToken);
-            }
-        }
-
     }
 }

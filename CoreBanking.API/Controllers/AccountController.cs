@@ -1,13 +1,12 @@
 ﻿using AutoMapper;
-using CoreBanking.API.Models;
-using CoreBanking.API.Models.Requests;
 using CoreBanking.Application.Accounts.Commands.CloseMyAccount;
 using CoreBanking.Application.Accounts.Commands.CreateAccount;
 using CoreBanking.Application.Accounts.Commands.UpdateAccountPreferences;
 using CoreBanking.Application.Accounts.DTOs;
 using CoreBanking.Application.Accounts.Queries.GetAccountBalance;
 using CoreBanking.Application.Accounts.Queries.GetAccountDetails;
-using CoreBanking.Core.Entities;
+using CoreBanking.Core.Models;
+using CoreBanking.Core.Models.Requests;
 using CoreBanking.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

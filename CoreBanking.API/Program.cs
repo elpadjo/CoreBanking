@@ -16,17 +16,16 @@ using CoreBanking.Core.Events;
 using CoreBanking.Core.Interfaces;
 using CoreBanking.Infrastructure.Data;
 using CoreBanking.Infrastructure.External.Resilience;
+using CoreBanking.Infrastructure.Interceptors;
 using CoreBanking.Infrastructure.Repositories;
 using CoreBanking.Infrastructure.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
-using System.Reflection;
 
 namespace CoreBanking.API
 {
@@ -38,8 +37,14 @@ namespace CoreBanking.API
 
             // ------------------- SERVICES -------------------
 
+            // Register interceptor
+            builder.Services.AddScoped<OutboxInterceptor>();
+
             builder.Services.AddDbContext<BankingDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            {
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+                options.AddInterceptors(new OutboxInterceptor());
+            });
 
             // Core dependencies
             builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();

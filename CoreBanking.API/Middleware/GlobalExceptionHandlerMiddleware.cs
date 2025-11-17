@@ -1,4 +1,4 @@
-﻿using CoreBanking.API.Models;
+﻿using CoreBanking.Core.Models;
 using FluentValidation;
 
 namespace CoreBanking.API.Middleware;

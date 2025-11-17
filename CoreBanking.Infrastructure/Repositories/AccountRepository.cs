@@ -67,10 +67,19 @@ namespace CoreBanking.Infrastructure.Repositories
 
         public async Task<AccountNumber> GenerateAccountNumberAsync()
         {
-            var nextVal = await _context.Database.SqlQueryRaw<long>(
-                "SELECT NEXT VALUE FOR dbo.AccountNumberSeq").FirstAsync();
+            var conn = _context.Database.GetDbConnection();
 
-            return AccountNumber.Create(nextVal.ToString("D10"));
+            if (string.IsNullOrWhiteSpace(conn.ConnectionString))
+                throw new InvalidOperationException("Database connection string is not initialized. Ensure UseSqlServer(...) is configured.");
+
+            await conn.OpenAsync();
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT NEXT VALUE FOR dbo.AccountNumberSeq";
+
+            var result = (long)await cmd.ExecuteScalarAsync();
+
+            return AccountNumber.Create(result.ToString("D10"));
         }
 
         public async Task SaveChangesAsync()

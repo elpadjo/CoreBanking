@@ -1,4 +1,4 @@
-﻿namespace CoreBanking.API.Models.Requests;
+﻿namespace CoreBanking.Core.Models.Requests;
 
 public record CreateAccountRequest
 {
